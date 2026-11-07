@@ -29,6 +29,10 @@ th,td{padding:6px;border-bottom:1px solid var(--ln);text-align:left;white-space:
 .n{text-align:right}
 svg{width:100%;height:auto}
 .note{color:var(--sub);font-size:12px}
+.bad{border-color:#d1242f}
+.warn{color:#d1242f;font-weight:600}
+.up{color:#d1242f}.dn{color:#1f6feb}
+textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--ln);border-radius:8px;padding:8px;margin:8px 0}
 </style>
 </head>
 <body>
@@ -62,25 +66,36 @@ function saveMan(){try{localStorage.setItem("bw_man",JSON.stringify(man))}catch(
 function loadView(){const d={cm:"temp",rng:"7",cs:"",ce:"",yr:{}};try{return Object.assign(d,JSON.parse(localStorage.getItem("bw_view")||"{}"))}catch(e){return d}}
 function saveView(){try{localStorage.setItem("bw_view",JSON.stringify(view))}catch(e){}}
 let auto=[],man=loadMan(),view=loadView(),cur=new Date(),tab="now",err="読み込み中…";
-const all=()=>auto.concat(man);
+const all=()=>auto.concat(man.map(r=>({...r,src:"m"})));
 async function loadCsv(){
  for(const u of CSV_URLS){
   try{const r=await fetch(u+"?t="+Date.now());if(!r.ok)throw new Error(r.status);
    const ls=(await r.text()).trim().split(/\r?\n/),hd=ls.shift().split(",");
-   auto=ls.map(l=>{const c=l.split(","),o={};hd.forEach((k,i)=>o[k]=c[i]);return{time:o.time,place:o.place,level:num(o.level),flow:num(o.flow),temp:num(o.temp)}});
+   auto=ls.map(l=>{const c=l.split(","),o={};hd.forEach((k,i)=>o[k]=c[i]);return{time:o.time,place:o.place,level:num(o.level),flow:num(o.flow),temp:num(o.temp),src:"a"}});
    err="";return}catch(e){err="データを読み込めませんでした("+e.message+")"}}
 }
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?"on":""}" data-k="${k}">${n}</button>`).join("");
  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.k;show()})}
 function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,rec:rec})[tab]()}
+const DP={level:2,flow:1,temp:1};
+function nearest(rs,t,tol){let b=null,bd=1e18;for(const r of rs){const d=Math.abs(new Date(r.time).getTime()-t);if(d<bd){bd=d;b=r}}return b&&bd<=tol?b:null}
+const dif=(a,b,m)=>a&&b?a[m]-b[m]:null;
+function chg(v,m){if(v==null)return"–";const dp=DP[m];if(Math.abs(v)<0.5*Math.pow(10,-dp))return"±0";return`<span class="${v>0?"up":"dn"}">${v>0?"▲":"▼"}${Math.abs(v).toFixed(dp)}</span>`}
 function now(){
- const t=new Date(),a=age(t.getFullYear(),t.getMonth(),t.getDate());
- let h=`<div class="card"><b>今日</b> ${moon(a)} ${shio(a)} / 月齢${a.toFixed(1)}</div>`;
- const rs=all();
+ const t=new Date(),a=age(t.getFullYear(),t.getMonth(),t.getDate()),rs=all(),H=36e5;
+ let h="";
+ const la=auto.reduce((m,r)=>r.time>m?r.time:m,"");
+ if(la){const hr=(Date.now()-new Date(la).getTime())/H,bad=hr>=3;
+  h+=`<div class="card${bad?" bad":""}"><b>データ最終更新</b> ${la.replace("T"," ")}(${hr<1?"1時間以内":Math.floor(hr)+"時間前"})${bad?`<div class="warn">3時間以上更新がありません。取得が止まっている可能性があります。GitHub の Actions を確認してください。</div>`:""}</div>`}
+ h+=`<div class="card"><b>今日</b> ${moon(a)} ${shio(a)} / 月齢${a.toFixed(1)}</div>`;
  for(const m of["level","flow","temp"]){
-  const last={};rs.filter(r=>r[m]!=null).forEach(r=>{if(!last[r.place]||r.time>last[r.place].time)last[r.place]=r});
-  const ps=Object.keys(last);if(!ps.length)continue;
-  h+=`<div class="card"><b>${LAB[m]}</b><table>`+ps.map(p=>`<tr><td>${esc(p)}</td><td class="n"><b>${last[p][m]}</b></td><td class="note">${last[p].time.replace("T"," ")}</td></tr>`).join("")+`</table></div>`}
+  const by={};rs.filter(r=>r[m]!=null).forEach(r=>(by[r.place]=by[r.place]||[]).push(r));
+  const ps=Object.keys(by);if(!ps.length)continue;
+  h+=`<div class="card scroll"><b>${LAB[m]}</b><table><tr><th>地点</th><th class="n">現在</th><th class="n">前日比</th><th class="n">3時間</th><th>時刻</th></tr>`+ps.map(p=>{
+   const q=by[p],L=q.reduce((x,r)=>r.time>x.time?r:x),T=new Date(L.time).getTime();
+   const d1=dif(L,nearest(q,T-24*H,2*H),m),d3=dif(L,nearest(q,T-3*H,1*H),m);
+   const stale=L.src==="a"&&(Date.now()-T)/H>=3;
+   return`<tr><td>${esc(p)}</td><td class="n"><b>${L[m]}</b></td><td class="n">${chg(d1,m)}</td><td class="n">${chg(d3,m)}</td><td class="note${stale?" warn":""}">${stale?"⚠ ":""}${L.time.slice(5).replace("T"," ")}</td></tr>`}).join("")+`</table></div>`}
  if(err)h+=`<p class="note">${esc(err)}</p>`;
  $("#v-now").innerHTML=h;
 }
@@ -135,10 +150,24 @@ function rec(){
  <div class="row"><label>日時<input id="t" type="datetime-local" value="${nowStr()}"></label><label>地点<input id="p" value="瀬田川洗堰"></label></div>
  <div class="row"><label>水位(m)<input id="l" type="number" step="any"></label><label>放流量(m³/s)<input id="f" type="number" step="any"></label><label>水温(℃)<input id="w" type="number" step="any"></label></div>
  <button class="pri" id="add">追加</button></div>
- <div class="card scroll"><table><tr><th>日時</th><th>地点</th><th>水位</th><th>放流量</th><th>水温</th><th></th></tr>${rows||'<tr><td colspan="6">まだ記録がありません</td></tr>'}</table></div>`;
+ <div class="card scroll"><table><tr><th>日時</th><th>地点</th><th>水位</th><th>放流量</th><th>水温</th><th></th></tr>${rows||'<tr><td colspan="6">まだ記録がありません</td></tr>'}</table></div>
+ <div class="card"><b>バックアップ</b><p class="note">手入力の記録を、文字として書き出し・読み込みできます。書き出した文字は、メモアプリなどに保存してください。</p>
+ <div class="row"><button id="bx">書き出す</button><button id="bi">読み込む</button></div>
+ <textarea id="bt" rows="6"></textarea>
+ <div class="row"><button id="bc" hidden>コピー</button><button id="bo" class="pri" hidden>取り込む</button></div></div>`;
  $("#add").onclick=()=>{const v=id=>num($(id).value),o={time:$("#t").value,place:$("#p").value||"未設定",level:v("#l"),flow:v("#f"),temp:v("#w")};
   if(!o.time||(o.level==null&&o.flow==null&&o.temp==null))return;man.push(o);saveMan();rec()};
  $("#v-rec").querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>{man.splice(+b.dataset.i,1);saveMan();rec()});
+ const bt=$("#bt");
+ $("#bx").onclick=()=>{bt.value="time,place,level,flow,temp\n"+man.map(r=>[r.time,r.place,r.level??"",r.flow??"",r.temp??""].join(",")).join("\n");$("#bc").hidden=false;$("#bo").hidden=true;bt.select()};
+ $("#bi").onclick=()=>{bt.value="";bt.placeholder="ここに書き出した文字を貼って、「取り込む」を押してください";$("#bo").hidden=false;$("#bc").hidden=true;bt.focus()};
+ $("#bc").onclick=async()=>{try{await navigator.clipboard.writeText(bt.value);alert("コピーしました")}catch(e){bt.select();alert("文字を選択しました。コピーしてください")}};
+ $("#bo").onclick=()=>{let add=0;const have=new Set(man.map(x=>[x.time,x.place,x.level,x.flow,x.temp].join("|")));
+  bt.value.split(/\r?\n/).forEach(l=>{const c=l.split(",");if(c.length<5||c[0]==="time")return;
+   const o={time:c[0].trim().replace(" ","T").slice(0,16),place:c[1].trim()||"未設定",level:num(c[2]),flow:num(c[3]),temp:num(c[4])};
+   if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(o.time)||(o.level==null&&o.flow==null&&o.temp==null))return;
+   const k=[o.time,o.place,o.level,o.flow,o.temp].join("|");if(have.has(k))return;have.add(k);man.push(o);add++});
+  saveMan();alert(add+" 件を取り込みました");rec()};
 }
 show();loadCsv().then(show);
 </script>
