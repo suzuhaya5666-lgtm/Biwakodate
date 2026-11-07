@@ -59,7 +59,9 @@ function shio(a){const d=Math.min(30,Math.floor(a)+1),r=((d-1)%15)+1;if(r<=4)ret
 const moon=a=>MOONS[Math.floor(a/SYN*8+.5)%8];
 function loadMan(){try{return JSON.parse(localStorage.getItem("bw_man")||"[]")}catch(e){return[]}}
 function saveMan(){try{localStorage.setItem("bw_man",JSON.stringify(man))}catch(e){}}
-let auto=[],man=loadMan(),cur=new Date(),tab="now",cm="temp",rng=7,err="読み込み中…";
+function loadView(){const d={cm:"temp",rng:"7",cs:"",ce:"",yr:{}};try{return Object.assign(d,JSON.parse(localStorage.getItem("bw_view")||"{}"))}catch(e){return d}}
+function saveView(){try{localStorage.setItem("bw_view",JSON.stringify(view))}catch(e){}}
+let auto=[],man=loadMan(),view=loadView(),cur=new Date(),tab="now",err="読み込み中…";
 const all=()=>auto.concat(man);
 async function loadCsv(){
  for(const u of CSV_URLS){
@@ -93,24 +95,38 @@ function cal(){
 }
 const fmt=ms=>{const d=new Date(ms);return`${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:00`};
 function chart(){
- const lim=rng?Date.now()-rng*864e5:0;
- const pts=all().filter(r=>r[cm]!=null&&new Date(r.time).getTime()>=lim);
+ const cm=view.cm,yr=view.yr[cm]||["",""],custom=view.rng==="c";
+ let lo=0,hi=Infinity;
+ if(custom){if(view.cs)lo=new Date(view.cs+"T00:00").getTime();if(view.ce)hi=new Date(view.ce+"T23:59").getTime()}
+ else if(+view.rng)lo=Date.now()-(+view.rng)*864e5;
+ const pts=all().filter(r=>{const t=new Date(r.time).getTime();return r[cm]!=null&&t>=lo&&t<=hi});
  const places=[...new Set(pts.map(r=>r.place))];
  let svg='<p class="note">この期間のデータがありません。</p>',leg="";
  if(pts.length){
   const W=640,H=260,P=44,xs=pts.map(r=>new Date(r.time).getTime()),ys=pts.map(r=>r[cm]);
-  const x0=Math.min(...xs),x1=Math.max(...xs);let y0=Math.min(...ys),y1=Math.max(...ys);if(y0===y1){y0-=1;y1+=1}
+  const x0=custom&&view.cs?lo:Math.min(...xs),x1=custom&&view.ce?hi:Math.max(...xs);
+  let y0=Math.min(...ys),y1=Math.max(...ys);
+  if(yr[0]!==""&&!isNaN(+yr[0]))y0=+yr[0];
+  if(yr[1]!==""&&!isNaN(+yr[1]))y1=+yr[1];
+  if(y0===y1&&yr[0]===""&&yr[1]===""){y0-=1;y1+=1}else if(y0>=y1)y1=y0+1;
   const X=v=>P+(x1===x0?.5:(v-x0)/(x1-x0))*(W-P-10),Y=v=>H-P-(v-y0)/(y1-y0)*(H-P-12);
-  svg=`<svg viewBox="0 0 ${W} ${H}">`+
+  svg=`<svg viewBox="0 0 ${W} ${H}"><defs><clipPath id="cp"><rect x="${P}" y="8" width="${W-P-10}" height="${H-P-8}"/></clipPath></defs>`+
    [0,.5,1].map(f=>{const v=y0+(y1-y0)*f;return`<line x1="${P}" x2="${W-10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--ln)"/><text x="${P-4}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="var(--sub)">${+v.toFixed(2)}</text>`}).join("")+
-   `<text x="${P}" y="${H-14}" font-size="11" fill="var(--sub)">${fmt(x0)}</text><text x="${W-10}" y="${H-14}" font-size="11" text-anchor="end" fill="var(--sub)">${fmt(x1)}</text>`+
+   `<text x="${P}" y="${H-14}" font-size="11" fill="var(--sub)">${fmt(x0)}</text><text x="${W-10}" y="${H-14}" font-size="11" text-anchor="end" fill="var(--sub)">${fmt(x1)}</text><g clip-path="url(#cp)">`+
    places.map((p,i)=>{const q=pts.filter(r=>r.place===p).sort((a,b)=>a.time.localeCompare(b.time));
-    return`<polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="2" points="${q.map(r=>X(new Date(r.time).getTime())+","+Y(r[cm])).join(" ")}"/>`+(q.length<=3?q.map(r=>`<circle cx="${X(new Date(r.time).getTime())}" cy="${Y(r[cm])}" r="3" fill="${COL[i%COL.length]}"/>`).join(""):"")}).join("")+`</svg>`;
+    return`<polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="2" points="${q.map(r=>X(new Date(r.time).getTime())+","+Y(r[cm])).join(" ")}"/>`+(q.length<=3?q.map(r=>`<circle cx="${X(new Date(r.time).getTime())}" cy="${Y(r[cm])}" r="3" fill="${COL[i%COL.length]}"/>`).join(""):"")}).join("")+`</g></svg>`;
   leg=`<p class="note">`+places.map((p,i)=>`<span style="color:${COL[i%COL.length]}">━</span> ${esc(p)}`).join("　")+`</p>`}
  $("#v-chart").innerHTML=`<div class="card"><div class="row"><select id="cm">${Object.keys(LAB).map(k=>`<option value="${k}">${LAB[k]}</option>`).join("")}</select>
- <select id="rg"><option value="2">2日</option><option value="7">7日</option><option value="30">30日</option><option value="0">すべて</option></select></div>${svg}${leg}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
- $("#cm").value=cm;$("#rg").value=String(rng);
- $("#cm").onchange=e=>{cm=e.target.value;chart()};$("#rg").onchange=e=>{rng=+e.target.value;chart()};
+ <select id="rg"><option value="2">2日</option><option value="7">7日</option><option value="30">30日</option><option value="0">すべて</option><option value="c">期間を指定</option></select></div>
+ ${custom?`<div class="row"><label>開始日<input id="cs" type="date" value="${view.cs}"></label><label>終了日<input id="ce" type="date" value="${view.ce}"></label></div>`:""}
+ <div class="row"><label>縦軸の最小<input id="y0" type="number" step="any" placeholder="自動" value="${yr[0]}"></label><label>縦軸の最大<input id="y1" type="number" step="any" placeholder="自動" value="${yr[1]}"></label><button id="ya">自動に戻す</button></div>
+ ${svg}${leg}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
+ $("#cm").value=cm;$("#rg").value=view.rng;
+ const set=(k,v)=>{view[k]=v;saveView();chart()},setY=(i,v)=>{const a=view.yr[cm]||["",""];a[i]=v;view.yr[cm]=a;saveView();chart()};
+ $("#cm").onchange=e=>set("cm",e.target.value);$("#rg").onchange=e=>set("rng",e.target.value);
+ if(custom){$("#cs").onchange=e=>set("cs",e.target.value);$("#ce").onchange=e=>set("ce",e.target.value)}
+ $("#y0").onchange=e=>setY(0,e.target.value);$("#y1").onchange=e=>setY(1,e.target.value);
+ $("#ya").onclick=()=>{delete view.yr[cm];saveView();chart()};
 }
 function nowStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`}
 function rec(){
