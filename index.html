@@ -52,6 +52,8 @@ const CSV_URLS=["https://raw.githubusercontent.com/suzuhaya5666-lgtm/Biwakodate/
 const REPO="https://raw.githubusercontent.com/suzuhaya5666-lgtm/Biwakodate/main/data/history/";
 const HD_URLS=[REPO+"karahashi_daily.csv","data/history/karahashi_daily.csv"],HH_URLS=[REPO+"karahashi_hourly_history.csv","data/history/karahashi_hourly_history.csv"];
 const HIST_END=new Date("2026-11-05T10:00").getTime();
+const CLIM={"r10":{"唐橋(瀬田川)":{"m":[7.95,7.55,7.3,7.06,6.87,6.82,6.88,7.02,7.31,7.56,7.96,8.27,8.83,9.44,10.06,10.79,11.39,12.26,13.09,14.02,14.73,15.38,16.25,17.08,17.97,18.58,19.31,19.95,20.78,21.54,22.11,22.53,22.96,23.41,24.01,24.63,25.18,25.59,25.99,26.58,27.38,28.2,29.17,29.82,30.08,29.65,29.27,28.93,28.6,28.11,27.59,27.15,26.42,25.6,24.81,24.03,23.11,22.11,21.09,20.09,19.01,18.05,17.23,16.51,15.79,14.98,14.11,12.76,11.84,10.91,9.89,8.98,8.26,8.01],"s":[1.05,1.19,1.19,1.14,0.92,0.91,0.91,0.74,0.71,0.74,0.87,0.85,0.83,0.97,1.16,1.39,1.43,1.36,1.34,1.17,1.13,1.12,1.19,1.02,0.92,0.91,0.88,0.78,0.91,1.15,1.22,0.91,0.73,0.73,0.58,0.58,0.96,1.17,1.32,1.42,1.54,1.58,1.24,0.8,0.71,1.03,1.4,1.42,1.23,1.14,1.3,1.71,1.76,1.6,1.35,1.15,1.2,1.26,0.98,0.89,1.01,0.97,0.89,0.86,0.72,0.98,1.28,0.94,0.78,0.53,0.64,1.03,1.2,1.07]},"雄琴沖":{"m":[9.11,8.78,8.48,8.25,7.97,7.82,7.72,7.8,7.97,8.07,8.39,8.54,8.87,9.09,9.54,10.11,10.51,11.07,11.71,12.54,13.19,13.74,14.33,14.98,15.81,16.55,17.31,17.95,18.74,19.53,20.31,21.04,21.56,22.15,22.68,23.16,23.56,24.1,24.82,25.68,26.6,27.52,28.54,29.17,29.46,29.17,28.9,28.68,28.3,27.76,27.18,26.75,26.11,25.47,24.51,23.82,23.03,22.09,21.18,20.22,19.37,18.51,17.78,17.11,16.25,15.41,14.61,13.6,12.74,11.9,11.03,10.27,9.65,9.19],"s":[0.7,0.83,0.84,0.75,0.64,0.66,0.69,0.6,0.63,0.68,0.75,0.68,0.64,0.73,0.81,0.91,0.92,0.89,0.91,0.88,0.9,0.9,0.92,0.76,0.65,0.76,0.7,0.57,0.75,0.95,0.91,0.7,0.55,0.58,0.49,0.54,0.75,0.95,1.13,1.26,1.46,1.5,1.19,0.8,0.83,1.06,1.3,1.22,1.06,1.04,1.24,1.63,1.64,1.54,1.21,1.18,1.21,1.15,0.93,0.86,0.81,0.81,0.76,0.71,0.57,0.61,0.75,0.59,0.53,0.41,0.44,0.65,0.77,0.7]},"安曇川沖":{"m":[11.67,10.98,10.4,9.98,9.63,9.3,9.0,8.77,8.6,8.51,8.48,8.45,8.43,8.41,8.4,8.42,8.66,9.13,9.74,10.43,11.12,11.76,12.38,13.04,13.73,14.43,15.14,15.83,16.5,17.17,17.84,18.52,19.22,19.95,20.73,21.54,22.39,23.24,24.09,24.9,25.78,26.77,27.78,28.68,29.36,29.72,29.69,29.47,29.11,28.66,28.16,27.66,27.18,26.68,26.13,25.54,24.91,24.24,23.54,22.74,21.87,20.96,20.05,19.18,18.38,17.62,16.9,16.19,15.5,14.81,14.11,13.37,12.59,11.82],"s":[0.79,0.77,0.76,0.75,0.73,0.71,0.7,0.69,0.68,0.67,0.68,0.72,0.76,0.82,0.89,0.97,1.12,1.32,1.53,1.73,1.86,1.91,1.89,1.84,1.79,1.74,1.71,1.7,1.7,1.7,1.7,1.71,1.71,1.71,1.7,1.67,1.63,1.58,1.53,1.48,1.43,1.37,1.3,1.25,1.2,1.17,1.17,1.17,1.17,1.17,1.17,1.17,1.19,1.35,1.62,1.93,2.2,2.37,2.39,2.25,2.02,1.75,1.47,1.26,1.14,1.07,1.01,0.96,0.91,0.88,0.85,0.83,0.81,0.79]}},"all":{"唐橋(瀬田川)":{"m":[7.64,7.24,6.97,6.77,6.6,6.53,6.5,6.59,6.82,7.05,7.47,7.86,8.42,8.89,9.31,9.89,10.47,11.27,12.02,12.92,13.76,14.62,15.46,16.26,17.14,17.98,18.7,19.28,20.0,20.79,21.52,22.1,22.67,23.21,23.78,24.41,24.97,25.46,25.97,26.6,27.31,27.97,28.67,29.27,29.55,29.45,29.2,28.91,28.54,28.08,27.64,27.16,26.47,25.59,24.67,23.73,22.85,21.93,21.05,20.07,19.12,18.23,17.43,16.56,15.53,14.47,13.56,12.49,11.58,10.59,9.58,8.73,8.06,7.71],"s":[1.03,1.07,1.08,0.98,0.84,0.86,0.94,0.94,0.95,0.93,0.96,0.96,1.0,1.02,1.13,1.31,1.35,1.43,1.5,1.47,1.42,1.4,1.49,1.44,1.4,1.17,1.04,0.92,1.12,1.26,1.33,1.23,1.05,0.97,0.9,1.02,1.23,1.31,1.46,1.51,1.59,1.6,1.38,1.04,0.92,1.04,1.26,1.28,1.27,1.23,1.28,1.45,1.46,1.3,1.11,1.04,1.05,1.06,0.87,0.8,0.83,0.82,0.83,0.85,0.78,0.92,1.12,0.9,0.94,1.11,1.29,1.46,1.34,1.06]},"雄琴沖":{"m":[8.75,8.37,8.05,7.83,7.54,7.4,7.28,7.34,7.46,7.55,7.85,8.07,8.4,8.56,8.89,9.36,9.75,10.28,10.85,11.66,12.4,13.13,13.6,14.17,14.98,15.95,16.77,17.37,18.05,18.83,19.65,20.5,21.17,21.88,22.39,22.92,23.36,23.99,24.72,25.53,26.39,27.23,28.04,28.59,28.88,28.88,28.75,28.6,28.18,27.71,27.12,26.67,26.07,25.36,24.39,23.5,22.66,21.82,20.98,20.04,19.21,18.4,17.67,16.84,15.83,14.88,14.12,13.22,12.33,11.41,10.58,9.88,9.25,8.84],"s":[0.75,0.81,0.84,0.74,0.69,0.7,0.71,0.69,0.73,0.76,0.8,0.77,0.82,0.81,0.86,0.96,0.97,1.03,1.1,1.14,1.15,1.2,1.27,1.24,1.17,1.01,0.87,0.78,0.98,1.11,1.19,1.1,0.92,0.85,0.82,0.84,0.85,0.95,1.15,1.25,1.43,1.48,1.3,0.99,0.95,1.02,1.12,1.1,1.12,1.12,1.17,1.31,1.29,1.2,1.0,1.01,1.01,0.96,0.79,0.73,0.66,0.66,0.66,0.71,0.68,0.71,0.79,0.69,0.79,0.98,1.03,1.1,0.97,0.77]},"安曇川沖":{"m":[11.36,10.67,10.09,9.67,9.32,9.0,8.71,8.48,8.3,8.2,8.14,8.08,8.04,8.01,7.99,8.0,8.17,8.5,8.94,9.45,10.0,10.53,11.14,11.85,12.63,13.45,14.25,15.01,15.74,16.47,17.19,17.91,18.65,19.41,20.2,21.01,21.84,22.67,23.49,24.28,25.11,26.05,27.0,27.84,28.48,28.81,28.8,28.65,28.41,28.09,27.72,27.33,26.93,26.41,25.79,25.09,24.35,23.6,22.87,22.08,21.25,20.39,19.55,18.72,17.95,17.22,16.51,15.82,15.14,14.46,13.78,13.04,12.27,11.5],"s":[0.84,0.84,0.84,0.84,0.83,0.79,0.75,0.72,0.69,0.67,0.68,0.7,0.72,0.76,0.8,0.86,1.01,1.25,1.52,1.76,1.94,1.99,1.96,1.9,1.82,1.75,1.69,1.67,1.67,1.67,1.66,1.66,1.66,1.66,1.65,1.64,1.63,1.61,1.59,1.57,1.53,1.48,1.43,1.37,1.33,1.3,1.31,1.33,1.36,1.41,1.46,1.51,1.56,1.62,1.69,1.77,1.83,1.86,1.86,1.75,1.58,1.38,1.18,1.03,0.96,0.93,0.9,0.87,0.86,0.85,0.84,0.84,0.84,0.84]}}};
+const BASES={r10:"直近10年(2015〜2024)",all:"全期間(2003〜2024)"};
 const SYN=29.530588853,$=s=>document.querySelector(s);
 const MOONS=["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"];
 const LAB={temp:"水温(℃)",flow:"放流量(m³/s)",level:"水位(m)"};
@@ -68,7 +70,7 @@ function shio(a){const d=Math.min(30,Math.floor(a)+1),r=((d-1)%15)+1;if(r<=4)ret
 const moon=a=>MOONS[Math.floor(a/SYN*8+.5)%8];
 function loadMan(){try{return JSON.parse(localStorage.getItem("bw_man")||"[]")}catch(e){return[]}}
 function saveMan(){try{localStorage.setItem("bw_man",JSON.stringify(man))}catch(e){}}
-function loadView(){const d={cm:"temp",rng:"7",cs:"",ce:"",yr:{}};try{return Object.assign(d,JSON.parse(localStorage.getItem("bw_view")||"{}"))}catch(e){return d}}
+function loadView(){const d={cm:"temp",rng:"7",cs:"",ce:"",yr:{},base:"r10"};try{return Object.assign(d,JSON.parse(localStorage.getItem("bw_view")||"{}"))}catch(e){return d}}
 function saveView(){try{localStorage.setItem("bw_view",JSON.stringify(view))}catch(e){}}
 let auto=[],hist=[],histHourly=false,histTried=false,histNote="",man=loadMan(),view=loadView(),cur=new Date(),tab="now",err="読み込み中…";
 const all=()=>auto.concat(man.map(r=>({...r,src:"m"})));
@@ -93,6 +95,10 @@ async function loadHistHourly(){
  if(tab==="chart")chart()}
 const tsOf=r=>r.ts??(r.ts=new Date(r.time).getTime());
 function down(q,m,N=1500){if(q.length<=N)return q;const st=q.length/N,o=[];for(let i=0;i<N;i++){const a=Math.floor(i*st),b=Math.floor((i+1)*st),sl=q.slice(a,b);if(!sl.length)continue;o.push({time:sl[Math.floor(sl.length/2)].time,ts:tsOf(sl[Math.floor(sl.length/2)]),[m]:sl.reduce((t,r)=>t+r[m],0)/sl.length})}return o}
+function climAt(p,ts){const b=view.base,c=CLIM[b]&&CLIM[b][p];if(!c)return null;
+ const d=new Date(ts),i=(Date.UTC(2000,d.getMonth(),d.getDate())-Date.UTC(2000,0,1))/864e5,g=Math.min(i/5,72.999),k=Math.floor(g),f=g-k;
+ return{m:c.m[k]*(1-f)+c.m[k+1]*f,s:c.s[k]*(1-f)+c.s[k+1]*f}}
+const baseSel=()=>`<select id="bs"><option value="r10">平年:${BASES.r10}</option><option value="all">平年:${BASES.all}</option><option value="off">平年:なし</option></select>`;
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?"on":""}" data-k="${k}">${n}</button>`).join("");
  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.k;show()})}
 function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,rec:rec})[tab]()}
@@ -114,13 +120,17 @@ function now(){
  h+=`</div>`;
  for(const m of keys){
   const g=by(m),ps=Object.keys(g);if(!ps.length)continue;
-  h+=`<div class="card scroll"><b>${LAB[m]}</b><table><tr><th>地点</th><th class="n">現在</th><th class="n">前日比</th><th class="n">3時間</th><th>時刻</th></tr>`+ps.map(p=>{
+  const cl=m==="temp"&&view.base!=="off";
+  h+=`<div class="card scroll"><div class="row"><b style="flex:1">${LAB[m]}</b>${m==="temp"?baseSel():""}</div><table><tr><th>地点</th><th class="n">現在</th><th class="n">前日比</th><th class="n">3時間</th>${cl?'<th class="n">平年差</th>':""}<th>時刻</th></tr>`+ps.map(p=>{
    const q=g[p],L=latest(q),T=new Date(L.time).getTime();
    const d1=dif(L,nearest(q,T-24*H,2*H),m),d3=dif(L,nearest(q,T-3*H,1*H),m);
    const stale=L.src==="a"&&(Date.now()-T)/H>=3;
-   return`<tr><td>${esc(p)}</td><td class="n"><b>${L[m]}</b></td><td class="n">${chg(d1,m)}</td><td class="n">${chg(d3,m)}</td><td class="note${stale?" warn":""}">${stale?"⚠ ":""}${L.time.slice(5).replace("T"," ")}</td></tr>`}).join("")+`</table></div>`}
+   let ca="";if(cl){const c=climAt(p,T);ca=c?`<td class="n">${chg(L[m]-c.m,m)}<span class="note"> ${Math.abs(L[m]-c.m)<c.s*0.5?"並":L[m]>c.m?(L[m]-c.m>=c.s?"高め":"やや高"):(c.m-L[m]>=c.s?"低め":"やや低")}</span></td>`:'<td class="n">–</td>'}
+   return`<tr><td>${esc(p)}</td><td class="n"><b>${L[m]}</b></td><td class="n">${chg(d1,m)}</td><td class="n">${chg(d3,m)}</td>${ca}<td class="note${stale?" warn":""}">${stale?"⚠ ":""}${L.time.slice(5).replace("T"," ")}</td></tr>`}).join("")+`</table></div>`}
+ h+=`<p class="note">平年差は、選んだ期間の同じ時期の平均との差です。「高め/低め」は±1標準偏差を超えた場合です。雄琴沖は閉局前のデータと唐橋・大橋からの推定値です。</p>`;
  if(err)h+=`<p class="note">${esc(err)}</p>`;
  $("#v-now").innerHTML=h;
+ const b=$("#bs");if(b){b.value=view.base;b.onchange=e=>{view.base=e.target.value;saveView();now()}}
 }
 function cal(){
  const y=cur.getFullYear(),m=cur.getMonth(),n=new Date(y,m+1,0).getDate(),f=new Date(y,m,1).getDay(),t=new Date();
@@ -153,16 +163,22 @@ function chart(){
   svg=`<svg viewBox="0 0 ${W} ${H}"><defs><clipPath id="cp"><rect x="${P}" y="8" width="${W-P-10}" height="${H-P-8}"/></clipPath></defs>`+
    [0,.5,1].map(f=>{const v=y0+(y1-y0)*f;return`<line x1="${P}" x2="${W-10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--ln)"/><text x="${P-4}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="var(--sub)">${+v.toFixed(2)}</text>`}).join("")+
    `<text x="${P}" y="${H-14}" font-size="11" fill="var(--sub)">${fmt(x0)}</text><text x="${W-10}" y="${H-14}" font-size="11" text-anchor="end" fill="var(--sub)">${fmt(x1)}</text><g clip-path="url(#cp)">`+
+   (cm==="temp"&&view.base!=="off"&&x1-x0<=400*864e5?places.map((p,i)=>{if(!CLIM[view.base][p])return"";const n=100,xa=[],ma=[],sa=[];
+    for(let j=0;j<=n;j++){const t=x0+(x1-x0)*j/n,c=climAt(p,t);xa.push(t);ma.push(c.m);sa.push(c.s)}
+    const up=xa.map((t,j)=>X(t)+","+Y(ma[j]+sa[j])),dn=xa.map((t,j)=>X(t)+","+Y(ma[j]-sa[j])).reverse();
+    return`<polygon points="${up.concat(dn).join(" ")}" fill="${COL[i%COL.length]}" opacity=".13"/><polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="1.5" stroke-dasharray="5 4" opacity=".8" points="${xa.map((t,j)=>X(t)+","+Y(ma[j])).join(" ")}"/>`}).join(""):"")+
    places.map((p,i)=>{const q0=pts.filter(r=>r.place===p).sort((a,b)=>a.time<b.time?-1:a.time>b.time?1:0),q=down(q0,cm);
     return`<polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="2" points="${q.map(r=>X(tsOf(r))+","+Y(r[cm])).join(" ")}"/>`+(q.length<=3?q.map(r=>`<circle cx="${X(tsOf(r))}" cy="${Y(r[cm])}" r="3" fill="${COL[i%COL.length]}"/>`).join(""):"")}).join("")+`</g></svg>`;
-  leg=`<p class="note">`+places.map((p,i)=>`<span style="color:${COL[i%COL.length]}">━</span> ${esc(p)}`).join("　")+`</p>`}
+  leg=`<p class="note">`+places.map((p,i)=>`<span style="color:${COL[i%COL.length]}">━</span> ${esc(p)}`).join("　")+(cm==="temp"&&view.base!=="off"&&x1-x0<=400*864e5?`<br>点線=平年(${BASES[view.base]})、薄い帯=±1標準偏差`:"")+`</p>`}
  $("#v-chart").innerHTML=`<div class="card"><div class="row"><select id="cm">${Object.keys(LAB).map(k=>`<option value="${k}">${LAB[k]}</option>`).join("")}</select>
  <select id="rg"><option value="2">2日</option><option value="7">7日</option><option value="30">30日</option><option value="0">すべて</option><option value="c">期間を指定</option></select></div>
  ${custom?`<div class="row"><label>開始日<input id="cs" type="date" value="${view.cs}"></label><label>終了日<input id="ce" type="date" value="${view.ce}"></label></div>`:""}
+ ${cm==="temp"?`<div class="row">${baseSel()}</div>`:""}
  <div class="row"><label>縦軸の最小<input id="y0" type="number" step="any" placeholder="自動" value="${yr[0]}"></label><label>縦軸の最大<input id="y1" type="number" step="any" placeholder="自動" value="${yr[1]}"></label><button id="ya">自動に戻す</button></div>
  ${svg}${leg}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
  $("#cm").value=cm;$("#rg").value=view.rng;
  const set=(k,v)=>{view[k]=v;saveView();chart()},setY=(i,v)=>{const a=view.yr[cm]||["",""];a[i]=v;view.yr[cm]=a;saveView();chart()};
+ {const b=$("#bs");if(b){b.value=view.base;b.onchange=e=>set("base",e.target.value)}}
  $("#cm").onchange=e=>set("cm",e.target.value);$("#rg").onchange=e=>set("rng",e.target.value);
  if(custom){$("#cs").onchange=e=>set("cs",e.target.value);$("#ce").onchange=e=>set("ce",e.target.value)}
  $("#y0").onchange=e=>setY(0,e.target.value);$("#y1").onchange=e=>setY(1,e.target.value);
