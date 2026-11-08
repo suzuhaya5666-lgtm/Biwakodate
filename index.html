@@ -45,10 +45,13 @@ textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1
 <section id="v-cal" hidden></section>
 <section id="v-chart" hidden></section>
 <section id="v-rec" hidden></section>
-<p class="note">出典: 国土交通省 川の防災情報(水位・水温)。潮名は月齢からの計算値です。</p>
+<p class="note">出典: 国土交通省 川の防災情報・水文水質データベース(水位・水温)。潮名は月齢からの計算値です。</p>
 </main>
 <script>
 const CSV_URLS=["https://raw.githubusercontent.com/suzuhaya5666-lgtm/Biwakodate/main/data/observations.csv","data/observations.csv"];
+const REPO="https://raw.githubusercontent.com/suzuhaya5666-lgtm/Biwakodate/main/data/history/";
+const HD_URLS=[REPO+"karahashi_daily.csv","data/history/karahashi_daily.csv"],HH_URLS=[REPO+"karahashi_hourly_history.csv","data/history/karahashi_hourly_history.csv"];
+const HIST_END=new Date("2026-11-05T10:00").getTime();
 const SYN=29.530588853,$=s=>document.querySelector(s);
 const MOONS=["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"];
 const LAB={temp:"水温(℃)",flow:"放流量(m³/s)",level:"水位(m)"};
@@ -67,7 +70,7 @@ function loadMan(){try{return JSON.parse(localStorage.getItem("bw_man")||"[]")}c
 function saveMan(){try{localStorage.setItem("bw_man",JSON.stringify(man))}catch(e){}}
 function loadView(){const d={cm:"temp",rng:"7",cs:"",ce:"",yr:{}};try{return Object.assign(d,JSON.parse(localStorage.getItem("bw_view")||"{}"))}catch(e){return d}}
 function saveView(){try{localStorage.setItem("bw_view",JSON.stringify(view))}catch(e){}}
-let auto=[],man=loadMan(),view=loadView(),cur=new Date(),tab="now",err="読み込み中…";
+let auto=[],hist=[],histHourly=false,histTried=false,histNote="",man=loadMan(),view=loadView(),cur=new Date(),tab="now",err="読み込み中…";
 const all=()=>auto.concat(man.map(r=>({...r,src:"m"})));
 async function loadCsv(){
  for(const u of CSV_URLS){
@@ -76,6 +79,20 @@ async function loadCsv(){
    auto=ls.map(l=>{const c=l.split(","),o={};hd.forEach((k,i)=>o[k]=c[i]);return{time:o.time,place:o.place,level:num(o.level),flow:num(o.flow),temp:num(o.temp),src:"a"}});
    err="";return}catch(e){err="データを読み込めませんでした("+e.message+")"}}
 }
+async function fetchRows(urls,src){
+ for(const u of urls){
+  try{const r=await fetch(u+"?t="+Date.now());if(!r.ok)throw new Error(r.status);
+   const ls=(await r.text()).trim().split(/\r?\n/),hd=ls.shift().split(",");
+   return ls.map(l=>{const c=l.split(","),o={};hd.forEach((k,i)=>o[k]=c[i]);return{time:o.time,place:o.place,level:num(o.level),flow:num(o.flow),temp:num(o.temp),src}})}catch(e){}}
+ return null}
+async function loadHistDaily(){const r=await fetchRows(HD_URLS,"h");if(r&&!histHourly){hist=r;if(tab==="chart")chart()}}
+async function loadHistHourly(){
+ if(histHourly||histTried)return;histTried=true;histNote="1時間ごとの過去データを読み込み中…";if(tab==="chart")chart();
+ const r=await fetchRows(HH_URLS,"h");
+ if(r){hist=r;histHourly=true;histNote=""}else histNote="1時間ごとの過去データを読み込めませんでした(日平均で表示しています)";
+ if(tab==="chart")chart()}
+const tsOf=r=>r.ts??(r.ts=new Date(r.time).getTime());
+function down(q,m,N=1500){if(q.length<=N)return q;const st=q.length/N,o=[];for(let i=0;i<N;i++){const a=Math.floor(i*st),b=Math.floor((i+1)*st),sl=q.slice(a,b);if(!sl.length)continue;o.push({time:sl[Math.floor(sl.length/2)].time,ts:tsOf(sl[Math.floor(sl.length/2)]),[m]:sl.reduce((t,r)=>t+r[m],0)/sl.length})}return o}
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?"on":""}" data-k="${k}">${n}</button>`).join("");
  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.k;show()})}
 function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,rec:rec})[tab]()}
@@ -120,13 +137,15 @@ function chart(){
  let lo=0,hi=Infinity;
  if(custom){if(view.cs)lo=new Date(view.cs+"T00:00").getTime();if(view.ce)hi=new Date(view.ce+"T23:59").getTime()}
  else if(+view.rng)lo=Date.now()-(+view.rng)*864e5;
- const pts=all().filter(r=>{const t=new Date(r.time).getTime();return r[cm]!=null&&t>=lo&&t<=hi});
+ const pts=all().concat(hist).filter(r=>{const t=tsOf(r);return r[cm]!=null&&t>=lo&&t<=hi});
+ const need=custom&&!histHourly&&!histTried&&view.cs&&lo>0&&lo<HIST_END&&((hi===Infinity?Date.now():hi)-lo)<=62*864e5;
  const places=[...new Set(pts.map(r=>r.place))];
  let svg='<p class="note">この期間のデータがありません。</p>',leg="";
  if(pts.length){
-  const W=640,H=260,P=44,xs=pts.map(r=>new Date(r.time).getTime()),ys=pts.map(r=>r[cm]);
-  const x0=custom&&view.cs?lo:Math.min(...xs),x1=custom&&view.ce?hi:Math.max(...xs);
-  let y0=Math.min(...ys),y1=Math.max(...ys);
+  const W=640,H=260,P=44,xs=pts.map(r=>tsOf(r)),ys=pts.map(r=>r[cm]);
+  const mn=a=>a.reduce((m,v)=>v<m?v:m,Infinity),mx=a=>a.reduce((m,v)=>v>m?v:m,-Infinity);
+  const x0=custom&&view.cs?lo:mn(xs),x1=custom&&view.ce?hi:mx(xs);
+  let y0=mn(ys),y1=mx(ys);
   if(yr[0]!==""&&!isNaN(+yr[0]))y0=+yr[0];
   if(yr[1]!==""&&!isNaN(+yr[1]))y1=+yr[1];
   if(y0===y1&&yr[0]===""&&yr[1]===""){y0-=1;y1+=1}else if(y0>=y1)y1=y0+1;
@@ -134,20 +153,21 @@ function chart(){
   svg=`<svg viewBox="0 0 ${W} ${H}"><defs><clipPath id="cp"><rect x="${P}" y="8" width="${W-P-10}" height="${H-P-8}"/></clipPath></defs>`+
    [0,.5,1].map(f=>{const v=y0+(y1-y0)*f;return`<line x1="${P}" x2="${W-10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--ln)"/><text x="${P-4}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="var(--sub)">${+v.toFixed(2)}</text>`}).join("")+
    `<text x="${P}" y="${H-14}" font-size="11" fill="var(--sub)">${fmt(x0)}</text><text x="${W-10}" y="${H-14}" font-size="11" text-anchor="end" fill="var(--sub)">${fmt(x1)}</text><g clip-path="url(#cp)">`+
-   places.map((p,i)=>{const q=pts.filter(r=>r.place===p).sort((a,b)=>a.time.localeCompare(b.time));
-    return`<polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="2" points="${q.map(r=>X(new Date(r.time).getTime())+","+Y(r[cm])).join(" ")}"/>`+(q.length<=3?q.map(r=>`<circle cx="${X(new Date(r.time).getTime())}" cy="${Y(r[cm])}" r="3" fill="${COL[i%COL.length]}"/>`).join(""):"")}).join("")+`</g></svg>`;
+   places.map((p,i)=>{const q0=pts.filter(r=>r.place===p).sort((a,b)=>a.time<b.time?-1:a.time>b.time?1:0),q=down(q0,cm);
+    return`<polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="2" points="${q.map(r=>X(tsOf(r))+","+Y(r[cm])).join(" ")}"/>`+(q.length<=3?q.map(r=>`<circle cx="${X(tsOf(r))}" cy="${Y(r[cm])}" r="3" fill="${COL[i%COL.length]}"/>`).join(""):"")}).join("")+`</g></svg>`;
   leg=`<p class="note">`+places.map((p,i)=>`<span style="color:${COL[i%COL.length]}">━</span> ${esc(p)}`).join("　")+`</p>`}
  $("#v-chart").innerHTML=`<div class="card"><div class="row"><select id="cm">${Object.keys(LAB).map(k=>`<option value="${k}">${LAB[k]}</option>`).join("")}</select>
  <select id="rg"><option value="2">2日</option><option value="7">7日</option><option value="30">30日</option><option value="0">すべて</option><option value="c">期間を指定</option></select></div>
  ${custom?`<div class="row"><label>開始日<input id="cs" type="date" value="${view.cs}"></label><label>終了日<input id="ce" type="date" value="${view.ce}"></label></div>`:""}
  <div class="row"><label>縦軸の最小<input id="y0" type="number" step="any" placeholder="自動" value="${yr[0]}"></label><label>縦軸の最大<input id="y1" type="number" step="any" placeholder="自動" value="${yr[1]}"></label><button id="ya">自動に戻す</button></div>
- ${svg}${leg}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
+ ${svg}${leg}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
  $("#cm").value=cm;$("#rg").value=view.rng;
  const set=(k,v)=>{view[k]=v;saveView();chart()},setY=(i,v)=>{const a=view.yr[cm]||["",""];a[i]=v;view.yr[cm]=a;saveView();chart()};
  $("#cm").onchange=e=>set("cm",e.target.value);$("#rg").onchange=e=>set("rng",e.target.value);
  if(custom){$("#cs").onchange=e=>set("cs",e.target.value);$("#ce").onchange=e=>set("ce",e.target.value)}
  $("#y0").onchange=e=>setY(0,e.target.value);$("#y1").onchange=e=>setY(1,e.target.value);
  $("#ya").onclick=()=>{delete view.yr[cm];saveView();chart()};
+ if(need)setTimeout(loadHistHourly,0);
 }
 function nowStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`}
 function rec(){
@@ -175,7 +195,7 @@ function rec(){
    const k=[o.time,o.place,o.level,o.flow,o.temp].join("|");if(have.has(k))return;have.add(k);man.push(o);add++});
   saveMan();alert(add+" 件を取り込みました");rec()};
 }
-show();loadCsv().then(show);
+show();loadCsv().then(show);loadHistDaily();
 </script>
 </body>
 </html>
