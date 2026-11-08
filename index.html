@@ -100,6 +100,19 @@ function climAt(p,ts){const b=view.base,c=CLIM[b]&&CLIM[b][p];if(!c)return null;
  const d=new Date(ts),i=(Date.UTC(2000,d.getMonth(),d.getDate())-Date.UTC(2000,0,1))/864e5,g=Math.min(i/5,72.999),k=Math.floor(g),f=g-k;
  return{m:c.m[k]*(1-f)+c.m[k+1]*f,s:c.s[k]*(1-f)+c.s[k+1]*f}}
 const baseSel=()=>`<select id="bs"><option value="r10">平年:${BASES.r10}</option><option value="all">平年:${BASES.all}</option><option value="off">平年:なし</option></select>`;
+let nfix=0;
+function fixTemp(rows){const g={},out=[];
+ rows.forEach(r=>{if(r.src==="h"||r.temp==null){out.push(r);return}(g[r.place]=g[r.place]||[]).push(r)});
+ for(const p in g){const a=g[p].sort((x,y)=>x.time<y.time?-1:x.time>y.time?1:0),n=a.length,T=a.map(tsOf),bad=new Array(n).fill(false);
+  for(let i=0;i<n;i++){const nb=[];for(let j=Math.max(0,i-3);j<=Math.min(n-1,i+3);j++)if(j!==i&&Math.abs(T[j]-T[i])<=12*36e5)nb.push(a[j].temp);
+   if(nb.length>=2){nb.sort((x,y)=>x-y);const md=nb.length%2?nb[(nb.length-1)/2]:(nb[nb.length/2-1]+nb[nb.length/2])/2;if(Math.abs(a[i].temp-md)>=5)bad[i]=true}}
+  a.forEach((r,i)=>{if(!bad[i]){out.push(r);return}
+   let b=i-1;while(b>=0&&bad[b])b--;let f=i+1;while(f<n&&bad[f])f++;
+   const v=b>=0&&f<n?(a[b].temp+a[f].temp)/2:b>=0?a[b].temp:f<n?a[f].temp:null;
+   if(v==null){out.push(r);return}nfix++;out.push({...r,temp:+v.toFixed(2),raw:r.temp})})}
+ return out}
+function jump(q){let L=null,P=null;for(const r of q)if(!L||r.time>L.time)L=r;if(!L)return null;for(const r of q)if(r.time<L.time&&(!P||r.time>P.time))P=r;
+ if(!P)return null;const gap=(new Date(L.time)-new Date(P.time))/36e5;return gap<=6&&Math.abs(L.temp-P.temp)>=5?{from:P.temp,to:L.temp}:null}
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?"on":""}" data-k="${k}">${n}</button>`).join("");
  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.k;show()})}
 function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,rec:rec})[tab]()}
@@ -115,7 +128,7 @@ function now(){
  const latest=q=>q.reduce((x,r)=>r.time>x.time?r:x);
  let h=`<div class="card${bad?" bad":""}"><div style="font-size:18px"><span class="note">今日</span> <b>${moon(a)} ${shio(a)}</b> <span class="note">月齢${a.toFixed(1)}</span></div>`;
  for(const m of keys){const g=by(m),ps=Object.keys(g);if(!ps.length)continue;
-  h+=`<div style="margin-top:8px"><div class="lbl">${LAB[m]}</div>`+ps.map(p=>`<span class="chip">${esc(p)} <b>${latest(g[p])[m]}</b></span>`).join("")+`</div>`}
+  h+=`<div style="margin-top:8px"><div class="lbl">${LAB[m]}</div>`+ps.map(p=>`<span class="chip">${esc(p)} ${m==="temp"&&jump(g[p])?"⚠️":""}<b>${latest(g[p])[m]}</b></span>`).join("")+`</div>`}
  if(la)h+=`<div class="note" style="margin-top:8px">データ最終更新 ${la.replace("T"," ")}(${hr<1?"1時間以内":Math.floor(hr)+"時間前"})</div>`;
  if(bad)h+=`<div class="warn">3時間以上更新がありません。取得が止まっている可能性があります。GitHub の Actions を確認してください。</div>`;
  h+=`</div>`;
@@ -127,7 +140,9 @@ function now(){
    const d1=dif(L,nearest(q,T-24*H,2*H),m),d3=dif(L,nearest(q,T-3*H,1*H),m);
    const stale=L.src==="a"&&(Date.now()-T)/H>=3;
    let ca="";if(cl){const c=climAt(p,T);ca=c?`<td class="n">${chg(L[m]-c.m,m)}<span class="note"> ${Math.abs(L[m]-c.m)<c.s*0.5?"並":L[m]>c.m?(L[m]-c.m>=c.s?"高め":"やや高"):(c.m-L[m]>=c.s?"低め":"やや低")}</span></td>`:'<td class="n">–</td>'}
-   return`<tr><td>${esc(p)}</td><td class="n"><b>${L[m]}</b></td><td class="n">${chg(d1,m)}</td><td class="n">${chg(d3,m)}</td>${ca}<td class="note${stale?" warn":""}">${stale?"⚠ ":""}${L.time.slice(5).replace("T"," ")}</td></tr>`}).join("")+`</table></div>`}
+   return`<tr><td>${esc(p)}</td><td class="n">${m==="temp"&&jump(q)?"⚠️ ":""}<b>${L[m]}</b></td><td class="n">${chg(d1,m)}</td><td class="n">${chg(d3,m)}</td>${ca}<td class="note${stale?" warn":""}">${stale?"⚠ ":""}${L.time.slice(5).replace("T"," ")}</td></tr>`}).join("")+`</table></div>`}
+ {const jl=Object.entries(by("temp")).map(([p,q])=>[p,jump(q)]).filter(x=>x[1]);
+  if(jl.length)h+=`<p class="warn">⚠️ 水温が前回の値から5℃以上変化しています: ${jl.map(([p,j])=>esc(p)+"("+j.from+"→"+j.to+")").join("、")}。センサー異常の可能性があります。</p>`}
  h+=`<p class="note">平年差は、選んだ期間の同じ時期の平均との差です。「高め/低め」は±1標準偏差を超えた場合です。雄琴沖は閉局前のデータと唐橋・大橋からの推定値です。</p>`;
  if(err)h+=`<p class="note">${esc(err)}</p>`;
  $("#v-now").innerHTML=h;
@@ -148,7 +163,7 @@ function chart(){
  let lo=0,hi=Infinity;
  if(custom){if(view.cs)lo=new Date(view.cs+"T00:00").getTime();if(view.ce)hi=new Date(view.ce+"T23:59").getTime()}
  else if(+view.rng)lo=Date.now()-(+view.rng)*864e5;
- const pts0=all().concat(hist).filter(r=>{const t=tsOf(r);return r[cm]!=null&&t>=lo&&t<=hi});
+ nfix=0;const pts00=all().concat(hist).filter(r=>{const t=tsOf(r);return r[cm]!=null&&t>=lo&&t<=hi}),pts0=cm==="temp"?fixTemp(pts00):pts00;
  const need=custom&&!histHourly&&!histTried&&view.cs&&lo>0&&lo<HIST_END&&((hi===Infinity?Date.now():hi)-lo)<=62*864e5;
  const places=[...new Set(pts0.map(r=>r.place))],hid=view.hide||[],pts=pts0.filter(r=>!hid.includes(r.place));
  let svg='<p class="note">この期間のデータがありません。</p>',leg="",tipFn=null;const series=[];
@@ -183,7 +198,7 @@ function chart(){
  ${custom?`<div class="row"><label>開始日<input id="cs" type="date" value="${view.cs}"></label><label>終了日<input id="ce" type="date" value="${view.ce}"></label></div>`:""}
  ${cm==="temp"?`<div class="row">${baseSel()}</div>`:""}
  <div class="row"><label>縦軸の最小<input id="y0" type="number" step="any" placeholder="自動" value="${yr[0]}"></label><label>縦軸の最大<input id="y1" type="number" step="any" placeholder="自動" value="${yr[1]}"></label><button id="ya">自動に戻す</button></div>
- ${chips}${svg}${leg}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
+ ${chips}${svg}${leg}${nfix?`<p class="note">⚠️ 前後の値から5℃以上ずれた異常値 ${nfix} 件を、前後の正常値の平均に直して表示しています(元のデータは変えていません)。</p>`:""}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
  $("#cm").value=cm;$("#rg").value=view.rng;
  $("#v-chart").querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>{const p=places[+b.dataset.i],h=view.hide||[];view.hide=h.includes(p)?h.filter(x=>x!==p):h.concat(p);saveView();chart()});
  {const sv=$("#v-chart svg");if(sv&&tipFn)["pointerdown","pointermove"].forEach(ev=>sv.addEventListener(ev,e=>tipFn(e,sv)))}
