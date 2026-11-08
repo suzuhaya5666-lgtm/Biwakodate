@@ -27,7 +27,8 @@ nav button.on,button.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{padding:6px;border-bottom:1px solid var(--ln);text-align:left;white-space:nowrap}
 .n{text-align:right}
-svg{width:100%;height:auto}
+svg{width:100%;height:auto;touch-action:pan-y}
+.pl{padding:4px 10px;border-radius:16px;font-size:13px}
 .note{color:var(--sub);font-size:12px}
 .bad{border-color:#d1242f}
 .warn{color:#d1242f;font-weight:600}
@@ -147,10 +148,10 @@ function chart(){
  let lo=0,hi=Infinity;
  if(custom){if(view.cs)lo=new Date(view.cs+"T00:00").getTime();if(view.ce)hi=new Date(view.ce+"T23:59").getTime()}
  else if(+view.rng)lo=Date.now()-(+view.rng)*864e5;
- const pts=all().concat(hist).filter(r=>{const t=tsOf(r);return r[cm]!=null&&t>=lo&&t<=hi});
+ const pts0=all().concat(hist).filter(r=>{const t=tsOf(r);return r[cm]!=null&&t>=lo&&t<=hi});
  const need=custom&&!histHourly&&!histTried&&view.cs&&lo>0&&lo<HIST_END&&((hi===Infinity?Date.now():hi)-lo)<=62*864e5;
- const places=[...new Set(pts.map(r=>r.place))];
- let svg='<p class="note">この期間のデータがありません。</p>',leg="";
+ const places=[...new Set(pts0.map(r=>r.place))],hid=view.hide||[],pts=pts0.filter(r=>!hid.includes(r.place));
+ let svg='<p class="note">この期間のデータがありません。</p>',leg="",tipFn=null;const series=[];
  if(pts.length){
   const W=640,H=260,P=44,xs=pts.map(r=>tsOf(r)),ys=pts.map(r=>r[cm]);
   const mn=a=>a.reduce((m,v)=>v<m?v:m,Infinity),mx=a=>a.reduce((m,v)=>v>m?v:m,-Infinity);
@@ -163,20 +164,29 @@ function chart(){
   svg=`<svg viewBox="0 0 ${W} ${H}"><defs><clipPath id="cp"><rect x="${P}" y="8" width="${W-P-10}" height="${H-P-8}"/></clipPath></defs>`+
    [0,.5,1].map(f=>{const v=y0+(y1-y0)*f;return`<line x1="${P}" x2="${W-10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--ln)"/><text x="${P-4}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="var(--sub)">${+v.toFixed(2)}</text>`}).join("")+
    `<text x="${P}" y="${H-14}" font-size="11" fill="var(--sub)">${fmt(x0)}</text><text x="${W-10}" y="${H-14}" font-size="11" text-anchor="end" fill="var(--sub)">${fmt(x1)}</text><g clip-path="url(#cp)">`+
-   (cm==="temp"&&view.base!=="off"&&x1-x0<=400*864e5?places.map((p,i)=>{if(!CLIM[view.base][p])return"";const n=100,xa=[],ma=[],sa=[];
+   (cm==="temp"&&view.base!=="off"&&x1-x0<=400*864e5?places.map((p,i)=>{if(hid.includes(p)||!CLIM[view.base][p])return"";const n=100,xa=[],ma=[],sa=[];
     for(let j=0;j<=n;j++){const t=x0+(x1-x0)*j/n,c=climAt(p,t);xa.push(t);ma.push(c.m);sa.push(c.s)}
     const up=xa.map((t,j)=>X(t)+","+Y(ma[j]+sa[j])),dn=xa.map((t,j)=>X(t)+","+Y(ma[j]-sa[j])).reverse();
     return`<polygon points="${up.concat(dn).join(" ")}" fill="${COL[i%COL.length]}" opacity=".13"/><polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="1.5" stroke-dasharray="5 4" opacity=".8" points="${xa.map((t,j)=>X(t)+","+Y(ma[j])).join(" ")}"/>`}).join(""):"")+
-   places.map((p,i)=>{const q0=pts.filter(r=>r.place===p).sort((a,b)=>a.time<b.time?-1:a.time>b.time?1:0),q=down(q0,cm);
-    return`<polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="2" points="${q.map(r=>X(tsOf(r))+","+Y(r[cm])).join(" ")}"/>`+(q.length<=3?q.map(r=>`<circle cx="${X(tsOf(r))}" cy="${Y(r[cm])}" r="3" fill="${COL[i%COL.length]}"/>`).join(""):"")}).join("")+`</g></svg>`;
-  leg=`<p class="note">`+places.map((p,i)=>`<span style="color:${COL[i%COL.length]}">━</span> ${esc(p)}`).join("　")+(cm==="temp"&&view.base!=="off"&&x1-x0<=400*864e5?`<br>点線=平年(${BASES[view.base]})、薄い帯=±1標準偏差`:"")+`</p>`}
+   places.map((p,i)=>{if(hid.includes(p))return"";const q0=pts.filter(r=>r.place===p).sort((a,b)=>a.time<b.time?-1:a.time>b.time?1:0),q=down(q0,cm);series.push({p,i,q});
+    return`<polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="2" points="${q.map(r=>X(tsOf(r))+","+Y(r[cm])).join(" ")}"/>`+(q.length<=3?q.map(r=>`<circle cx="${X(tsOf(r))}" cy="${Y(r[cm])}" r="3" fill="${COL[i%COL.length]}"/>`).join(""):"")}).join("")+`</g><g id="tip" pointer-events="none"></g></svg>`;
+  tipFn=(e,sv)=>{const r=sv.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*W,vy=(e.clientY-r.top)/r.height*H;let b=null,bd=1e18;
+   for(const s of series)for(const q of s.q){const py=Y(q[cm]);if(py<8||py>H-P)continue;const dx=X(tsOf(q))-vx,dy=py-vy,d=dx*dx+dy*dy;if(d<bd){bd=d;b=[s,q]}}
+   const g=sv.querySelector("#tip");if(!b||!g)return;const[s,q]=b,px=X(tsOf(q)),py=Y(q[cm]),d=new Date(tsOf(q)),c=COL[s.i%COL.length],
+   t1=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`,t2=`${s.p}  ${+q[cm].toFixed(2)} ${LAB[cm].replace(/^.*\(/,"").replace(")","")}`,
+   w=Math.max(t1.length*10,t2.length*10)+16,bx=px>W/2?px-w-8:px+8;
+   g.innerHTML=`<line x1="${px}" x2="${px}" y1="8" y2="${H-P}" stroke="${c}" stroke-dasharray="3 3"/><circle cx="${px}" cy="${py}" r="5" fill="${c}" stroke="#fff" stroke-width="1.5"/><rect x="${bx}" y="12" width="${w}" height="38" rx="6" fill="var(--card)" stroke="var(--ln)"/><text x="${bx+8}" y="28" font-size="12" fill="var(--tx)">${t1}</text><text x="${bx+8}" y="44" font-size="12" font-weight="600" fill="${c}">${esc(t2)}</text>`};
+  leg=`<p class="note">`+(cm==="temp"&&view.base!=="off"&&x1-x0<=400*864e5?`点線=平年(${BASES[view.base]})、薄い帯=±1標準偏差`:"")+`</p>`}
+ const chips=places.length?`<div class="row">${places.map((p,i)=>{const on=!hid.includes(p),c=COL[i%COL.length];return`<button class="pl" data-i="${i}" style="border-color:${c};${on?`background:${c};color:#fff`:"opacity:.45;text-decoration:line-through"}">${esc(p)}</button>`}).join("")}</div>`:"";
  $("#v-chart").innerHTML=`<div class="card"><div class="row"><select id="cm">${Object.keys(LAB).map(k=>`<option value="${k}">${LAB[k]}</option>`).join("")}</select>
  <select id="rg"><option value="2">2日</option><option value="7">7日</option><option value="30">30日</option><option value="0">すべて</option><option value="c">期間を指定</option></select></div>
  ${custom?`<div class="row"><label>開始日<input id="cs" type="date" value="${view.cs}"></label><label>終了日<input id="ce" type="date" value="${view.ce}"></label></div>`:""}
  ${cm==="temp"?`<div class="row">${baseSel()}</div>`:""}
  <div class="row"><label>縦軸の最小<input id="y0" type="number" step="any" placeholder="自動" value="${yr[0]}"></label><label>縦軸の最大<input id="y1" type="number" step="any" placeholder="自動" value="${yr[1]}"></label><button id="ya">自動に戻す</button></div>
- ${svg}${leg}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
+ ${chips}${svg}${leg}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
  $("#cm").value=cm;$("#rg").value=view.rng;
+ $("#v-chart").querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>{const p=places[+b.dataset.i],h=view.hide||[];view.hide=h.includes(p)?h.filter(x=>x!==p):h.concat(p);saveView();chart()});
+ {const sv=$("#v-chart svg");if(sv&&tipFn)["pointerdown","pointermove"].forEach(ev=>sv.addEventListener(ev,e=>tipFn(e,sv)))}
  const set=(k,v)=>{view[k]=v;saveView();chart()},setY=(i,v)=>{const a=view.yr[cm]||["",""];a[i]=v;view.yr[cm]=a;saveView();chart()};
  {const b=$("#bs");if(b){b.value=view.base;b.onchange=e=>set("base",e.target.value)}}
  $("#cm").onchange=e=>set("cm",e.target.value);$("#rg").onchange=e=>set("rng",e.target.value);
