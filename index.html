@@ -197,8 +197,7 @@ function chart(){
  <select id="rg"><option value="2">2日</option><option value="7">7日</option><option value="30">30日</option><option value="0">すべて</option><option value="c">期間を指定</option></select></div>
  ${custom?`<div class="row"><label>開始日<input id="cs" type="date" value="${view.cs}"></label><label>終了日<input id="ce" type="date" value="${view.ce}"></label></div>`:""}
  ${cm==="temp"?`<div class="row">${baseSel()}</div>`:""}
- <div class="row"><label>縦軸の最小<input id="y0" type="number" step="any" placeholder="自動" value="${yr[0]}"></label><label>縦軸の最大<input id="y1" type="number" step="any" placeholder="自動" value="${yr[1]}"></label><button id="ya">自動に戻す</button></div>
- ${chips}${svg}${leg}${nfix?`<p class="note">⚠️ 前後の値から5℃以上ずれた異常値 ${nfix} 件を、前後の正常値の平均に直して表示しています(元のデータは変えていません)。</p>`:""}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}</div>`;
+ ${chips}${svg}${leg}${nfix?`<p class="note">⚠️ 前後の値から5℃以上ずれた異常値 ${nfix} 件を、前後の正常値の平均に直して表示しています(元のデータは変えていません)。</p>`:""}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}<div class="row"><label>縦軸の最小<input id="y0" type="number" step="any" placeholder="自動" value="${yr[0]}"></label><label>縦軸の最大<input id="y1" type="number" step="any" placeholder="自動" value="${yr[1]}"></label><button id="ya">自動に戻す</button></div></div>`;
  $("#cm").value=cm;$("#rg").value=view.rng;
  $("#v-chart").querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>{const p=places[+b.dataset.i],h=view.hide||[];view.hide=h.includes(p)?h.filter(x=>x!==p):h.concat(p);saveView();chart()});
  {const sv=$("#v-chart svg");if(sv&&tipFn)["pointerdown","pointermove"].forEach(ev=>sv.addEventListener(ev,e=>tipFn(e,sv)))}
