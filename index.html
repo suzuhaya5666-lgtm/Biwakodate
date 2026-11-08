@@ -29,6 +29,15 @@ th,td{padding:6px;border-bottom:1px solid var(--ln);text-align:left;white-space:
 .n{text-align:right}
 svg{width:100%;height:auto;touch-action:pan-y}
 .pl{padding:4px 10px;border-radius:16px;font-size:13px}
+#wxm svg{max-height:calc(100vh - 190px);max-height:calc(100dvh - 190px);touch-action:manipulation}
+#wxm g.pin{cursor:pointer}
+.sheet{position:fixed;left:0;right:0;bottom:0;height:50vh;display:flex;flex-direction:column;background:var(--card);border-top:1px solid var(--ln);border-radius:16px 16px 0 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 16px rgba(0,0,0,.18);z-index:5}
+.sheet table{font-size:13px}
+.tb{flex:1;overflow:auto;min-height:0}
+.tb th{position:sticky;top:0;background:var(--card)}
+#wxm.op{padding-bottom:50vh}
+.sheet tr.cn td{background:var(--mid)}
+.bar{display:inline-block;height:8px;background:var(--ac);border-radius:4px;vertical-align:middle;margin-left:4px}
 .note{color:var(--sub);font-size:12px}
 .bad{border-color:#d1242f}
 .warn{color:#d1242f;font-weight:600}
@@ -45,6 +54,7 @@ textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1
 <section id="v-now"></section>
 <section id="v-cal" hidden></section>
 <section id="v-chart" hidden></section>
+<section id="v-wx" hidden></section>
 <section id="v-rec" hidden></section>
 <p class="note">出典: 国土交通省 川の防災情報・水文水質データベース(水位・水温)。潮名は月齢からの計算値です。</p>
 </main>
@@ -59,7 +69,7 @@ const SYN=29.530588853,$=s=>document.querySelector(s);
 const MOONS=["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"];
 const LAB={temp:"水温(℃)",flow:"放流量(m³/s)",level:"水位(m)"};
 const COL=["#1f6feb","#d1242f","#1a7f37","#9a6700","#8250df","#0a7ea4"];
-const TABS=[["now","いま"],["chart","グラフ"],["cal","潮名カレンダー"],["rec","手入力"]];
+const TABS=[["now","いま"],["chart","グラフ"],["wx","天気"],["cal","潮名カレンダー"],["rec","手入力"]];
 const pad=n=>String(n).padStart(2,"0");
 const num=v=>v===""||v==null||isNaN(Number(v))?null:Number(v);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -113,9 +123,50 @@ function fixTemp(rows){const g={},out=[];
  return out}
 function jump(q){let L=null,P=null;for(const r of q)if(!L||r.time>L.time)L=r;if(!L)return null;for(const r of q)if(r.time<L.time&&(!P||r.time>P.time))P=r;
  if(!P)return null;const gap=(new Date(L.time)-new Date(P.time))/36e5;return gap<=6&&Math.abs(L.temp-P.temp)>=5?{from:P.temp,to:L.temp}:null}
+const WXP=[["海津大崎",35.435,136.045,"l"],["安曇川町",35.32,136.02,"l"],["彦根市",35.275,136.22,"r"],["沖島",35.2,136.08,"r"],["志賀",35.17,135.925,"l"],["烏丸半島",35.045,135.945,"r"],["唐崎",35.035,135.91,"l"],["膳所",34.995,135.905,"l"]];
+const LAKE=[[136.09,35.52],[136.05,35.49],[136.03,35.45],[136.04,35.40],[136.03,35.35],[136.01,35.31],[135.97,35.27],[135.94,35.22],[135.92,35.17],[135.92,35.12],[135.935,35.10],[135.94,35.085],[135.92,35.06],[135.90,35.03],[135.89,35.00],[135.90,34.98],[135.92,34.97],[135.935,34.975],[135.95,34.99],[135.96,35.02],[135.95,35.05],[135.96,35.08],[135.97,35.09],[136.01,35.10],[136.05,35.12],[136.10,35.14],[136.15,35.17],[136.19,35.22],[136.22,35.27],[136.25,35.30],[136.28,35.33],[136.27,35.38],[136.22,35.42],[136.20,35.46],[136.17,35.50],[136.12,35.52]];
+const WXU="https://api.open-meteo.com/v1/forecast?latitude="+WXP.map(p=>p[1]).join(",")+"&longitude="+WXP.map(p=>p[2]).join(",")+"&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&hourly=weather_code,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m&daily=precipitation_sum&timezone=Asia%2FTokyo&wind_speed_unit=ms&forecast_days=2";
+let wxD=null,wxAt=0,wxErr="",wxSel=-1,wxBusy=false;
+const WXE=c=>c===0?"☀️":c===1?"🌤":c===2?"⛅":c===3?"☁️":c<=48?"🌫":c<=57?"🌦":c<=67?"🌧":c<=77?"🌨":c<=82?"🌧":c<=86?"🌨":"⛈";
+const DIRN=["北","北東","東","南東","南","南西","西","北西"],dirN=d=>DIRN[Math.round(d/45)%8];
+const arrow=d=>`<span style="display:inline-block;transform:rotate(${d+180}deg)">↑</span>`;
+async function loadWx(){if(wxBusy)return;wxBusy=true;
+ try{const r=await fetch(WXU);if(!r.ok)throw new Error(r.status);const j=await r.json();wxD=Array.isArray(j)?j:[j];wxAt=Date.now();wxErr=""}
+ catch(e){wxErr="天気を読み込めませんでした("+e.message+")"}
+ wxBusy=false;if(tab==="wx")wx()}
+function wx(){
+ if(!wxD||Date.now()-wxAt>15*60e3)loadWx();
+ const KX=909,KY=1112,X=o=>(o-135.80)*KX,Y=a=>(35.54-a)*KY,W=Math.round(.54*KX),H=Math.round(.59*KY);
+ const pts=LAKE.map(([o,a])=>[X(o),Y(a)]),n=pts.length,mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
+ let d=`M${mid(pts[n-1],pts[0]).join(",")}`;for(let i=0;i<n;i++)d+=`Q${pts[i].join(",")} ${mid(pts[i],pts[(i+1)%n]).join(",")}`;
+ let g=`<path d="${d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><ellipse cx="${X(136.14)}" cy="${Y(35.42)}" rx="5" ry="4" fill="var(--sml)"/><ellipse cx="${X(136.08)}" cy="${Y(35.2)}" rx="9" ry="7" fill="var(--sml)" stroke="#4f8fcb"/>`;
+ WXP.forEach(([nm,la,lo,sd],i)=>{const x=X(lo),y=Y(la),D=wxD&&wxD[i],c=D&&D.current,l=sd==="l";
+  const tx=l?-30:30,an=l?"end":"start";
+  g+=`<g class="pin" data-i="${i}" transform="translate(${x},${y})"><circle r="21" fill="var(--card)" stroke="${i===wxSel?"#d1242f":"var(--ac)"}" stroke-width="${i===wxSel?4:2}"/>
+   <text y="8" font-size="24" text-anchor="middle">${c?WXE(c.weather_code):"…"}</text>`+
+   (c?`<g transform="translate(${l?-17:17},17)"><circle r="10" fill="var(--ac)"/><g transform="rotate(${c.wind_direction_10m+180})"><path d="M0,-7 L5,4 L0,1 L-5,4Z" fill="#fff"/></g></g>`:"")+
+   `<text x="${tx}" y="-3" font-size="16" font-weight="700" text-anchor="${an}" fill="var(--tx)">${nm}</text>
+   <text x="${tx}" y="16" font-size="14" text-anchor="${an}" fill="var(--tx)">${c?`${dirN(c.wind_direction_10m)} ${c.wind_speed_10m.toFixed(1)}m/s`:""}</text></g>`});
+ let sh="";
+ if(wxSel>=0&&wxD&&wxD[wxSel]){const D=wxD[wxSel],c=D.current,hh=D.hourly,ds=D.daily,nowH=c.time.slice(0,13);
+  let rows="",last="";
+  hh.time.forEach((t,i)=>{const day=t.slice(0,10);if(day!==last){last=day;rows+=`<tr><td colspan="4" class="note"><b>${day===hh.time[0].slice(0,10)?"今日":"明日"}(${day.slice(5).replace("-","/")})</b></td></tr>`}
+   const cn=t.slice(0,13)===nowH;rows+=`<tr class="${cn?"cn":""}"${cn?' id="wxcn"':""}><td>${+t.slice(11,13)}時</td><td>${WXE(hh.weather_code[i])}</td><td class="n">${hh.precipitation[i].toFixed(1)}mm<span class="bar" style="width:${Math.min(60,hh.precipitation[i]*12)}px"></span></td><td>${arrow(hh.wind_direction_10m[i])} ${dirN(hh.wind_direction_10m[i])} <b>${hh.wind_speed_10m[i].toFixed(1)}</b><span class="note"> (瞬間${hh.wind_gusts_10m[i].toFixed(1)})</span></td></tr>`});
+  sh=`<div class="sheet"><div class="row"><b style="flex:1;font-size:17px">${WXP[wxSel][0]}</b><button id="wxc">閉じる</button></div>
+  <div style="font-size:15px">${WXE(c.weather_code)} <b>${(+c.temperature_2m).toFixed(1)}℃</b>　${arrow(c.wind_direction_10m)} ${dirN(c.wind_direction_10m)}の風 <b>${c.wind_speed_10m.toFixed(1)}</b>m/s</div>
+  <div class="note" style="margin:4px 0 8px">雨量の合計: 今日 <b>${ds.precipitation_sum[0].toFixed(1)}</b>mm / 明日 <b>${ds.precipitation_sum[1].toFixed(1)}</b>mm</div>
+  <div class="tb"><table><tr><th>時刻</th><th></th><th class="n">降水量</th><th>風向・風速(m/s)</th></tr>${rows}</table></div></div>`}
+ $("#v-wx").innerHTML=`<div id="wxm" class="${sh?"op":""}"><svg viewBox="0 0 ${W} ${H}" style="background:var(--sml);border-radius:12px">${g}</svg>
+  <p class="note">天気: Open-Meteo(予報モデルの値)。${wxAt?"取得 "+new Date(wxAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""} <button id="wxr">更新</button> ${wxBusy?"読み込み中…":""} ${esc(wxErr)}</p></div>${sh}`;
+ $("#v-wx").querySelectorAll("g.pin").forEach(e=>e.onclick=()=>{wxSel=+e.dataset.i;wx()});
+ {const c=$("#wxc");if(c)c.onclick=()=>{wxSel=-1;wx()}}
+ {const r=$("#wxr");if(r)r.onclick=()=>{wxAt=0;loadWx()}}
+ {const c=$("#wxcn"),f=$(".tb");if(c&&f)f.scrollTop=Math.max(0,c.offsetTop-f.clientHeight/3)}
+ if(wxSel>=0){const e=$("#v-wx").querySelectorAll("g.pin")[wxSel];if(e&&e.getBoundingClientRect){const b=e.getBoundingClientRect().bottom,lim=innerHeight*.42;if(b>lim)scrollBy(0,b-lim+10)}}
+}
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?"on":""}" data-k="${k}">${n}</button>`).join("");
  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.k;show()})}
-function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,rec:rec})[tab]()}
+function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,wx:wx,rec:rec})[tab]()}
 const DP={level:2,flow:1,temp:1};
 function nearest(rs,t,tol){let b=null,bd=1e18;for(const r of rs){const d=Math.abs(new Date(r.time).getTime()-t);if(d<bd){bd=d;b=r}}return b&&bd<=tol?b:null}
 const dif=(a,b,m)=>a&&b?a[m]-b[m]:null;
