@@ -243,11 +243,12 @@ def ntfy_send(topic, title, message, priority=3, tags=None):
 
 def notify_alerts(out, topic, send=ntfy_send):
     """前回の通知から増えた警報・注意報だけを送る。解除されたものは記録から外れ、再発表時にまた通知される。"""
-    named = any(a["name"] in N_AREAS for a in out["areas"])
+    lake = lambda nm: any(nm.startswith(x) for x in N_AREAS)  # 大津市南部・大津市北部も含む
+    named = any(lake(a["name"]) for a in out["areas"])
     cur = {}
     for a in out["areas"]:
         nm = a["name"]
-        if named and not (nm in N_AREAS or nm in ("北部", "南部")):
+        if named and not (lake(nm) or nm in ("北部", "南部")):
             continue
         label = "滋賀県" + nm if nm in ("北部", "南部") else nm
         for w in a["warnings"]:
