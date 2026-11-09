@@ -244,6 +244,22 @@ const DP={level:2,flow:1,temp:1};
 function nearest(rs,t,tol){let b=null,bd=1e18;for(const r of rs){const d=Math.abs(new Date(r.time).getTime()-t);if(d<bd){bd=d;b=r}}return b&&bd<=tol?b:null}
 const dif=(a,b,m)=>a&&b?a[m]-b[m]:null;
 function chg(v,m){if(v==null)return"–";const dp=DP[m];if(Math.abs(v)<0.5*Math.pow(10,-dp))return"±0";return`<span class="${v>0?"up":"dn"}">${v>0?"▲":"▼"}${Math.abs(v).toFixed(dp)}</span>`}
+/* ===== 産卵の目安(南湖) ===== */
+const SPP=["唐橋(瀬田川)","雄琴沖"];
+function spawnCard(rs,at){at=at||new Date();const ds=at.getFullYear()+"-"+pad(at.getMonth()+1)+"-"+pad(at.getDate());
+ const per=SPP.filter(p=>rs.some(r=>r.place===p&&r.temp!=null)).map(p=>{const v=[];for(let k=0;k<7;k++){const x=dayAvg(rs,"temp",dstr(ds,-k),p);if(x!=null)v.push(x)}return{p,n:v.length,t:v.length?v.reduce((a,b)=>a+b,0)/v.length:null}}).filter(o=>o.n>=3);
+ if(!per.length)return"";
+ const T=per.reduce((a,o)=>a+o.t,0)/per.length,mon=at.getMonth()+1,inS=mon>=2&&mon<=8,y=at.getFullYear();
+ const base=view.base==="off"?"r10":view.base,cm=d=>{const ts=new Date(y,0,1+d).getTime(),v=SPP.map(p=>climAt(p,ts,base)).filter(Boolean);return v.length?v.reduce((a,c)=>a+c.m,0)/v.length:null};
+ const cross=th=>{for(let d=40;d<215;d++){const a=cm(d),b=cm(d+1);if(a!=null&&b!=null&&a<th&&b>=th)return d+(th-a)/(b-a)}return null};
+ const lbl=d=>{if(d==null)return"–";const x=new Date(y,0,1+Math.round(d)),dd=x.getDate();return(x.getMonth()+1)+"月"+(dd<=10?"上旬":dd<=20?"中旬":"下旬")};
+ const ST=T<12?["産卵前(水温が低い)","#8b949e","まだ動きは鈍い時期です。"]:T<15?["プリスポーン(産卵の準備)","#0a7ea4","産卵床が見られ始める水温の手前です。浅場に差してくる時期。"]:T<16?["産卵が始まる水温","#1a7f37","一般に15℃以上で産卵が始まります。"]:T<20?["産卵の中心","#d1242f","琵琶湖で産卵が最も多いとされる水温(16〜20℃前後)です。"]:T<24?["産卵の後半〜終盤","#9a6700","ピークは20℃前後。24℃近くまでは産卵します。"]:["産卵期は終わり","#8b949e","産卵に向く水温を超えています。"];
+ let sh="";if(inS&&mon<=7&&T<24){const d=cross(T);if(d!=null){const td=(Date.UTC(y,at.getMonth(),at.getDate())-Date.UTC(y,0,1))/864e5,df=Math.round(d-td);sh=`<div style="margin-top:6px">平年と比べて <b>${Math.abs(df)<=2?"ほぼ平年並み":"約"+Math.abs(df)+"日 "+(df>0?"早い":"遅い")}</b> <span class="note">(今の水温が平年だと${lbl(d)}ごろの値)</span></div>`}}
+ return`<div class="card"><b>🐟 バスの産卵の目安(南湖)</b>
+ <div style="font-size:22px;margin:6px 0"><b>${T.toFixed(1)}℃</b> <span class="note">直近7日の平均 (${per.map(o=>esc(o.p.replace(/\(.*\)/,""))+" "+o.t.toFixed(1)).join("・")})</span></div>
+ ${inS?`<div><span style="background:${ST[1]};color:#fff;border-radius:12px;padding:3px 12px;font-weight:bold">${ST[0]}</span></div><div class="note" style="margin-top:4px">${ST[2]}</div>`:`<div class="note">いまは産卵期(2〜8月ごろ)ではありません。</div>`}${sh}
+ <div class="note" style="margin-top:6px">平年(${BASES[base]})では、水温が15℃になるのは${lbl(cross(15))}、16℃は${lbl(cross(16))}、20℃は${lbl(cross(20))}ごろです。</div>
+ <div class="note" style="margin-top:4px">南湖の沖の水温での目安です。北湖は場所差が大きいため対象外です。岸の浅場や内湖は、沖より先に暖まります。急な冷え込みや大雨で、産卵が中断・遅れることもあります。主な産卵水温16〜20℃は環境省の琵琶湖の資料によります。</div></div>`}
 function now(){
  const t=new Date(),a=age(t.getFullYear(),t.getMonth(),t.getDate()),rs=all(),H=36e5,keys=Object.keys(LAB);
  const la=auto.reduce((m,r)=>r.time>m?r.time:m,"");
@@ -256,6 +272,7 @@ function now(){
  if(la)h+=`<div class="note" style="margin-top:8px">データ最終更新 ${la.replace("T"," ")}(${hr<1?"1時間以内":Math.floor(hr)+"時間前"})</div>`;
  if(bad)h+=`<div class="warn">3時間以上更新がありません。取得が止まっている可能性があります。GitHub の Actions を確認してください。</div>`;
  h+=`</div>`;
+ try{h+=spawnCard(rs)}catch(e){}
  for(const m of keys){
   const g=by(m),ps=Object.keys(g);if(!ps.length)continue;
   const cl=m==="temp"&&view.base!=="off";
