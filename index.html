@@ -388,6 +388,64 @@ function dayAgg(p,day){const o={code:null,precip:null,wmax:null,dir:null,tmax:nu
 const tripPlaces=t=>{const k=(t.spots||[]).filter(x=>WXP.some(p=>p[0]===x));return k.length?k:WXP.map(p=>p[0])};
 const f1=v=>v==null?"–":(+v).toFixed(1);
 function dayAvg(rs,m,day,pl){const q=rs.filter(r=>r[m]!=null&&r.time.startsWith(day)&&(!pl||r.place===pl));return q.length?q.reduce((t,r)=>t+r[m],0)/q.length:null}
+
+/* ===== Google ドライブ写真 ===== */
+const GCID="46474470668-cgumoi91o5b7vvac0uv990haqihoq3id.apps.googleusercontent.com",PHMAX=8;
+let gtok=null,gexp=0,gtc=null,thumbs={};
+try{const x=JSON.parse(localStorage.getItem("bw_gtok")||"null");if(x&&x.exp>Date.now()){gtok=x.t;gexp=x.exp}}catch(e){}
+try{thumbs=JSON.parse(localStorage.getItem("bw_thumbs")||"{}")||{}}catch(e){thumbs={}}
+const saveThumbs=()=>{try{localStorage.setItem("bw_thumbs",JSON.stringify(thumbs))}catch(e){}};
+const gOK=()=>!!gtok&&Date.now()<gexp-60000;
+const gReady=()=>!!(window.google&&google.accounts&&google.accounts.oauth2);
+function gLoad(){return new Promise((ok,ng)=>{if(gReady())return ok();if(document.getElementById("gsi"))return setTimeout(()=>gLoad().then(ok,ng),300);const s=document.createElement("script");s.id="gsi";s.src="https://accounts.google.com/gsi/client";s.onload=()=>ok();s.onerror=()=>{s.remove();ng(new Error("Googleの読み込みに失敗しました"))};document.head.appendChild(s)})}
+function gAuth(){return new Promise((ok,ng)=>{if(gOK())return ok(gtok);
+ const go=()=>{try{if(!gtc)gtc=google.accounts.oauth2.initTokenClient({client_id:GCID,scope:"https://www.googleapis.com/auth/drive.file",callback:()=>{}});
+  gtc.callback=r=>{if(r.error)return ng(new Error(r.error));gtok=r.access_token;gexp=Date.now()+(+r.expires_in||3600)*1000;try{localStorage.setItem("bw_gtok",JSON.stringify({t:gtok,exp:gexp}))}catch(e){}ok(gtok)};
+  gtc.error_callback=e=>ng(new Error((e&&e.type)||"ログインできませんでした"));
+  gtc.requestAccessToken({prompt:""})}catch(e){ng(e)}};
+ if(gReady())go();else gLoad().then(go,ng)})}
+async function gApi(url,o){o=o||{};o.headers=Object.assign({Authorization:"Bearer "+gtok},o.headers||{});const r=await fetch(url,o);
+ if(r.status===401){gtok=null;try{localStorage.removeItem("bw_gtok")}catch(e){}throw new Error("ログインの期限が切れました。もう一度ログインしてください")}
+ return r}
+async function gFolder(){let f=localStorage.getItem("bw_gfolder");if(f)return f;
+ const q=encodeURIComponent("name='琵琶湖釣行写真' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+ let r=await gApi("https://www.googleapis.com/drive/v3/files?q="+q+"&fields=files(id)"),j=await r.json();
+ if(j.files&&j.files[0])f=j.files[0].id;else{r=await gApi("https://www.googleapis.com/drive/v3/files",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"琵琶湖釣行写真",mimeType:"application/vnd.google-apps.folder"})});j=await r.json();f=j.id}
+ if(!f)throw new Error("フォルダを作れませんでした");localStorage.setItem("bw_gfolder",f);return f}
+async function gUpload(blob,name){const f=await gFolder(),b="bw"+Date.now(),meta=JSON.stringify({name,parents:[f]});
+ const body=new Blob(["--"+b+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+meta+"\r\n--"+b+"\r\nContent-Type: image/jpeg\r\n\r\n",blob,"\r\n--"+b+"--"]);
+ const r=await gApi("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{method:"POST",headers:{"Content-Type":"multipart/related; boundary="+b},body});
+ if(!r.ok){if(r.status===404)localStorage.removeItem("bw_gfolder");throw new Error("保存に失敗しました("+r.status+")")}
+ return (await r.json()).id}
+async function gGet(id){const r=await gApi("https://www.googleapis.com/drive/v3/files/"+id+"?alt=media");if(!r.ok)throw new Error("写真を読み込めませんでした("+r.status+")");return r.blob()}
+async function gDel(id){const r=await gApi("https://www.googleapis.com/drive/v3/files/"+id,{method:"DELETE"});if(!r.ok&&r.status!==404)throw new Error("Drive側の削除に失敗しました")}
+function shrink(file,max,q){return new Promise((ok,ng)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):ng(new Error("変換に失敗しました")),"image/jpeg",q)};im.onerror=()=>{URL.revokeObjectURL(u);ng(new Error("この写真は読み込めません"))};im.src=u})}
+const b2url=b=>new Promise(ok=>{const r=new FileReader();r.onload=()=>ok(r.result);r.readAsDataURL(b)});
+function photoUI(t){const box=$("#tph");if(!box)return;t.photos=t.photos||[];
+ const n=t.photos.length,tn="width:calc(33.3% - 6px);aspect-ratio:1;object-fit:cover;border-radius:8px;background:#ccd;margin:3px";
+ box.innerHTML=`<div class="card"><b>📷 写真</b> <span class="note">${gOK()?"Googleにログイン中":"未ログイン"}(${n}/${PHMAX}枚)</span>
+ <div style="display:flex;flex-wrap:wrap;margin:6px -3px">${t.photos.map(id=>`<img data-ph="${esc(id)}" src="${thumbs[id]||"data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="}" style="${tn}">`).join("")}</div>
+ <div class="row"><button class="pri" id="pa" ${n>=PHMAX?"disabled":""}>${gOK()?"＋ 写真を追加":"Googleにログインして写真を使う"}</button></div>
+ <input id="pf" type="file" accept="image/*" multiple hidden><div class="note" id="pm">写真はあなたのGoogleドライブの「琵琶湖釣行写真」フォルダに保存されます。</div></div>`;
+ const msg=x=>{const m=$("#pm");if(m)m.textContent=x};
+ if(!gReady())gLoad().catch(()=>{});
+ $("#pa").onclick=()=>{if(!gOK()){gAuth().then(()=>photoUI(t),e=>msg(e.message));return}$("#pf").click()};
+ $("#pf").onchange=async function(){const fs=[...this.files].slice(0,PHMAX-t.photos.length);if(!fs.length)return;
+  try{if(!gOK())await gAuth();let k=0;for(const f of fs){k++;msg(`保存中… ${k}/${fs.length}`);
+   const full=await shrink(f,1600,.8),th=await b2url(await shrink(f,240,.6)),id=await gUpload(full,t.date+"_"+Date.now().toString(36)+".jpg");
+   thumbs[id]=th;saveThumbs();t.photos.push(id);saveTrips()}
+   photoUI(t)}catch(e){msg("失敗: "+e.message);saveTrips();setTimeout(()=>photoUI(t),2500)}};
+ box.querySelectorAll("img[data-ph]").forEach(im=>{const id=im.dataset.ph;im.onclick=()=>photoView(t,id);
+  if(!thumbs[id]&&gOK())gGet(id).then(b=>shrink(b,240,.6)).then(b2url).then(u=>{thumbs[id]=u;saveThumbs();im.src=u}).catch(()=>{})})}
+async function photoView(t,id){try{if(!gOK())await gAuth();
+ const ov=document.createElement("div");ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px";
+ ov.innerHTML=`<div id="pvm" style="color:#fff;margin-bottom:8px">読み込み中…</div><img id="pvi" style="max-width:100%;max-height:72vh;border-radius:6px" hidden><div class="row" style="margin-top:12px"><button id="pvc">閉じる</button><button id="pvd">削除</button></div>`;
+ document.body.appendChild(ov);let url="";const close=()=>{if(url)URL.revokeObjectURL(url);ov.remove()};
+ ov.querySelector("#pvc").onclick=close;
+ ov.querySelector("#pvd").onclick=async()=>{if(!confirm("この写真を削除しますか?(Googleドライブからも消えます)"))return;
+  try{await gDel(id);t.photos=t.photos.filter(x=>x!==id);delete thumbs[id];saveThumbs();saveTrips();close();photoUI(t)}catch(e){ov.querySelector("#pvm").textContent=e.message}};
+ try{const b=await gGet(id);url=URL.createObjectURL(b);const im=ov.querySelector("#pvi");im.src=url;im.hidden=false;ov.querySelector("#pvm").textContent=""}catch(e){ov.querySelector("#pvm").textContent=e.message}
+}catch(e){alert(e.message)}}
 const tEnd=t=>t.end&&t.end>=t.date?t.end:t.date;
 const tDays=t=>{const a=[];let d=t.date;for(let i=0;i<120&&d<=tEnd(t);i++){a.push(d);d=dstr(d,1)}return a};
 const tripOn=d=>trips.filter(t=>t.date<=d&&d<=tEnd(t));
@@ -417,17 +475,18 @@ function trip(){
   $("#fx").onclick=()=>{tripEdit=null;trip()};
   $("#fs").onclick=()=>{const date=$("#fd").value;if(!date)return;let end=$("#fe").value||"";if(end<=date)end="";
    const o2=tf.area==="other",oth=($("#fo").value||"").split(/[、,]/).map(x=>x.trim()).filter(Boolean),sp=o2?[]:[...new Set(tf.spots.concat(oth))];
-   const o={id:tf.id||Date.now().toString(36),date,end,area:o2?"other":"bw",place:o2?($("#fp").value||"").trim():"",spots:sp,catch:$("#fc").value.trim(),memo:$("#fm").value.trim()};
+   const o={id:tf.id||Date.now().toString(36),date,end,area:o2?"other":"bw",place:o2?($("#fp").value||"").trim():"",spots:sp,catch:$("#fc").value.trim(),memo:$("#fm").value.trim(),photos:tf.photos||[]};
    const i=trips.findIndex(x=>x.id===o.id);if(i<0)trips.push(o);else trips[i]=o;saveTrips();tripEdit=null;tripSel=o.id;tv=null;trip()};
   return}
  if(tripSel){const t=trips.find(x=>x.id===tripSel);if(!t){tripSel=null;return trip()}
-  const e0=tEnd(t),bw=isBw(t),days=tDays(t),head=`<div class="card"><div class="row"><button id="tb">← 一覧</button><span style="flex:1"></span><button id="te">編集</button><button id="td">削除</button></div>
+  const e0=tEnd(t),bw=isBw(t),days=tDays(t),head0=`<div class="card"><div class="row"><button id="tb">← 一覧</button><span style="flex:1"></span><button id="te">編集</button><button id="td">削除</button></div>
   <div style="font-size:18px"><b>${rangeLabel(t)}</b> ${t.date.slice(0,4)}年</div>
   <div style="margin-top:4px">📍 ${spotLabel(t)}</div>
   ${t.catch?`<div style="margin-top:4px">🎣 ${esc(t.catch)}</div>`:""}${t.memo?`<div class="note" style="margin-top:4px;white-space:pre-wrap">${esc(t.memo)}</div>`:""}</div>`;
-  const bind=()=>{
+  const head=head0+'<div id="tph"></div>';
+  const bind=()=>{photoUI(t);
    $("#tb").onclick=()=>{tripSel=null;tv=null;trip()};
-   $("#te").onclick=()=>{tf={id:t.id,date:t.date,end:t.end||"",area:t.area==="other"?"other":"bw",place:t.place||"",spots:(t.spots||[]).filter(x=>WXP.some(p=>p[0]===x)),other:(t.spots||[]).filter(x=>!WXP.some(p=>p[0]===x)).join("、"),catch:t.catch||"",memo:t.memo||""};tripEdit=t.id;trip()};
+   $("#te").onclick=()=>{tf={id:t.id,date:t.date,end:t.end||"",area:t.area==="other"?"other":"bw",place:t.place||"",spots:(t.spots||[]).filter(x=>WXP.some(p=>p[0]===x)),other:(t.spots||[]).filter(x=>!WXP.some(p=>p[0]===x)).join("、"),catch:t.catch||"",memo:t.memo||"",photos:t.photos||[]};tripEdit=t.id;trip()};
    $("#td").onclick=()=>{if(confirm("この釣行記録を削除しますか?")){trips=trips.filter(x=>x.id!==t.id);saveTrips();tripSel=null;tv=null;trip()}}};
   if(!bw){let rows="";days.forEach(d=>{rows+=`<tr class="hl"><td>${md(d)} 釣行</td><td>${tideOf(d)}</td></tr>`});
    el.innerHTML=head+`<div class="card scroll"><b>釣行日の潮名</b><table><tr><th>日付</th><th>潮</th></tr>${rows}</table><p class="note">琵琶湖以外の場所では、天気・水温などのデータは表示しません。潮名は月齢から計算した目安です。</p></div>`;bind();return}
@@ -461,7 +520,7 @@ function trip(){
  $("#xb").onclick=()=>{xt.value=JSON.stringify(trips);$("#xo").hidden=true;xt.select()};
  $("#ib").onclick=()=>{xt.value="";xt.placeholder="ここに書き出した文字を貼って、「取り込む」を押してください";$("#xo").hidden=false;xt.focus()};
  $("#xo").onclick=()=>{try{const a=JSON.parse(xt.value);if(!Array.isArray(a))throw 0;let n=0;const have=new Set(trips.map(t=>t.id)),ok=x=>/^\d{4}-\d\d-\d\d$/.test(x||"");
-  a.forEach(t=>{if(t&&t.id&&ok(t.date)&&!have.has(t.id)){trips.push({id:String(t.id),date:t.date,end:ok(t.end)?t.end:"",area:t.area==="other"?"other":"bw",place:String(t.place||""),spots:Array.isArray(t.spots)?t.spots.map(String):[],catch:String(t.catch||""),memo:String(t.memo||"")});have.add(t.id);n++}});
+  a.forEach(t=>{if(t&&t.id&&ok(t.date)&&!have.has(t.id)){trips.push({id:String(t.id),date:t.date,end:ok(t.end)?t.end:"",area:t.area==="other"?"other":"bw",place:String(t.place||""),spots:Array.isArray(t.spots)?t.spots.map(String):[],catch:String(t.catch||""),memo:String(t.memo||""),photos:Array.isArray(t.photos)?t.photos.map(String):[]});have.add(t.id);n++}});
   saveTrips();alert(n+" 件を取り込みました");trip()}catch(e){alert("読み込めませんでした。書き出した文字をそのまま貼ってください")}};
 }
 function nowStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`}
