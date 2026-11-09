@@ -178,6 +178,46 @@ def station_url(kind, code):
 def to_iso(s):  # "2026/11/06 21:00" -> "2026-11-06T21:00"
     return s.replace("/", "-").replace(" ", "T")
 
+# 気象庁の警報・注意報(滋賀県)。出典: 気象庁ホームページ
+A_OUT = Path("data/alerts.json")
+A_NAME = {
+    "02": "暴風雪警報", "03": "大雨警報", "04": "洪水警報", "05": "暴風警報", "06": "大雪警報",
+    "07": "波浪警報", "08": "高潮警報",
+    "10": "大雨注意報", "12": "大雪注意報", "13": "風雪注意報", "14": "雷注意報", "15": "強風注意報",
+    "16": "波浪注意報", "17": "融雪注意報", "18": "洪水注意報", "19": "高潮注意報", "20": "濃霧注意報",
+    "21": "乾燥注意報", "22": "なだれ注意報", "23": "低温注意報", "24": "霜注意報", "25": "着氷注意報",
+    "26": "着雪注意報",
+    "32": "暴風雪特別警報", "33": "大雨特別警報", "35": "暴風特別警報", "36": "大雪特別警報",
+    "37": "波浪特別警報", "38": "高潮特別警報",
+}
+
+
+def collect_alerts():
+    """滋賀県の警報・注意報を data/alerts.json に書き出す(毎回上書き)。"""
+    j = get_json("https://www.jma.go.jp/bosai/warning/data/warning/250000.json")
+    names = {}
+    try:
+        a = get_json("https://www.jma.go.jp/bosai/common/const/area.json")
+        for k in ("class10s", "class20s"):
+            for code, v in a.get(k, {}).items():
+                names[code] = v.get("name", code)
+    except Exception as e:
+        print(f"地域名の取得に失敗: {e}", file=sys.stderr)
+    out = {"updated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M"),
+           "reportTime": j.get("reportDatetime", ""), "areas": []}
+    for at in j.get("areaTypes", []):
+        for ar in at.get("areas", []):
+            ws = []
+            for w in ar.get("warnings", []):
+                code, st = str(w.get("code", "")), w.get("status", "")
+                if not code or st == "解除":
+                    continue
+                ws.append({"code": code, "name": A_NAME.get(code, "警報・注意報(" + code + ")"), "status": st})
+            code = str(ar.get("code", ""))
+            out["areas"].append({"code": code, "name": names.get(code, code), "warnings": ws})
+    A_OUT.write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+    print(f"警報・注意報を更新しました({sum(1 for a in out['areas'] if a['warnings'])}地域)")
+
 
 def main():
     if len(sys.argv) >= 4 and sys.argv[1] == "--dump":
@@ -218,7 +258,7 @@ def main():
             w.writeheader()
         w.writerows(rows)
     print(f"{len(rows)} 行を追記しました")
-    for fn in (collect_weather, collect_weather_hourly):
+    for fn in (collect_weather, collect_weather_hourly, collect_alerts):
         try:
             fn()
         except Exception as e:
