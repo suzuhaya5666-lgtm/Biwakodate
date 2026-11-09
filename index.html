@@ -278,7 +278,7 @@ function cal(){
  let h=`<div class="card"><div class="row"><button id="pv">←</button><b id="ch" style="flex:1;text-align:center;cursor:pointer;padding:6px 0">${y}年${m+1}月 ▾</b><button id="nx">→</button></div>`;
  if(calPick)h+=`<div class="row"><select id="cy">${Array.from({length:46},(_,i)=>1995+i).map(v=>`<option value="${v}"${v===y?" selected":""}>${v}年</option>`).join("")}</select><select id="cmn">${Array.from({length:12},(_,i)=>`<option value="${i}"${i===m?" selected":""}>${i+1}月</option>`).join("")}</select><button id="ct">今月</button></div>`;
  h+=`<div class="row"><label style="flex:1">天気マークの地点<select id="cpl">${WXP.map(p=>`<option value="${esc(p[0])}"${p[0]===calPl?" selected":""}>${esc(p[0])}</option>`).join("")}</select></label></div><div class="cal">`+"日月火水木金土".split("").map(c=>`<div class="h">${c}</div>`).join("")+"<div></div>".repeat(f);
- for(let d=1;d<=n;d++){const a=age(y,m,d),sh=shio(a),ds=`${y}-${pad(m+1)}-${pad(d)}`,wc=dayCode(calPl,ds),td=t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d,tr=trips.some(x=>x.date===ds);
+ for(let d=1;d<=n;d++){const a=age(y,m,d),sh=shio(a),ds=`${y}-${pad(m+1)}-${pad(d)}`,wc=dayCode(calPl,ds),td=t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d,tr=tripOn(ds).length>0;
   h+=`<div class="d ${sh} ${td?"t":""}${calSel===ds?" sel":""}" data-d="${ds}" style="cursor:pointer"><b>${d}</b> ${moon(a)}${tr?" 🎣":""}<span>${sh}</span><span style="font-size:16px;color:var(--tx)">${wc!=null?WXE(wc):""}</span></div>`}
  h+=`</div><p class="note">潮名は月齢から計算した目安です。公開されている潮名と1日ずれる場合があります。日付をタップすると、その日のデータが見られます。天気のマークは、過去は記録、今日から先は予報です。</p></div>`;
  if(calSel)h+=`<div id="cdet"></div>`;
@@ -295,19 +295,19 @@ function calDetail(d){
  const el=$("#cdet");if(!el)return;
  if(wxNeed())loadWx();loadWxHr(+d.slice(0,4));
  const g=dayAgg(calPl,d),rs=all().concat(hist),tmp=["雄琴沖","唐橋(瀬田川)","安曇川沖"].map(p=>{const q=rs.filter(r=>r.place===p&&r.temp!=null&&r.time.startsWith(d)).map(r=>r.temp);return q.length?`${p} <b>${(q.reduce((a,b)=>a+b,0)/q.length).toFixed(1)}</b>℃${q.length>1?`(${Math.min(...q).toFixed(1)}〜${Math.max(...q).toFixed(1)})`:""}`:null}).filter(Boolean),
-  lv=dayAvg(rs,"level",d,"琵琶湖(平均)")??dayAvg(rs,"level",d,"雄琴沖"),fl=dayAvg(rs,"flow",d),a=age(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8)),tl=trips.filter(x=>x.date===d);
+  lv=dayAvg(rs,"level",d,"琵琶湖(平均)")??dayAvg(rs,"level",d,"雄琴沖"),fl=dayAvg(rs,"flow",d),a=age(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8)),tl=tripOn(d);
  el.innerHTML=`<div class="card"><div class="row"><b style="flex:1;font-size:17px">${md(d)} ${d.slice(0,4)}年</b><button id="cx">閉じる</button></div>
  <div>${moon(a)} <b>${shio(a)}</b> <span class="note">月齢${a.toFixed(1)}</span></div>
  <div class="lbl" style="margin-top:10px">天気</div><div class="row" style="margin:4px 0">${WXP.map(p=>`<button class="pl ${p[0]===calPl?"pri":""}" data-p="${esc(p[0])}">${esc(p[0])}</button>`).join("")}</div>
  <div>${g.code==null?'<span class="note">この日の天気データはありません</span>':`${WXE(g.code)} <b>${WXN(g.code)}</b>　雨 ${f1(g.precip)}mm　${g.dir==null?"":arrow(g.dir)+" "+dirN(g.dir)+" "}最大 ${f1(g.wmax)}m/s　気温 ${g.tmin==null?"–":Math.round(g.tmin)+"〜"+Math.round(g.tmax)+"℃"}`}</div>
  <div class="lbl" style="margin-top:10px">水温(日平均)</div><div>${tmp.length?tmp.map(x=>`<span class="chip">${x}</span>`).join(""):'<span class="note">データなし</span>'}</div>
  <div class="lbl" style="margin-top:6px">水位・放流量</div><div>水位 <b>${lv==null?"–":lv.toFixed(2)}</b> m　放流量 <b>${fl==null?"–":fl.toFixed(0)}</b> m³/s</div>
- ${tl.length?`<div class="lbl" style="margin-top:10px">この日の釣行</div>`+tl.map(x=>`<div class="trow" data-id="${x.id}">📍 ${(x.spots||[]).map(esc).join("、")||"場所の指定なし"}${x.catch?"　🎣 "+esc(x.catch):""} ›</div>`).join(""):""}
+ ${tl.length?`<div class="lbl" style="margin-top:10px">この日の釣行</div>`+tl.map(x=>`<div class="trow" data-id="${x.id}">📍 ${spotLabel(x)}${x.catch?"　🎣 "+esc(x.catch):""} ›</div>`).join(""):""}
  <div class="row" style="margin-top:10px"><button class="pri" id="cadd">この日の釣行を記録する</button></div></div>`;
  $("#cx").onclick=()=>{calSel=null;cal()};
  el.querySelectorAll("button[data-p]").forEach(b=>b.onclick=()=>{calPl=b.dataset.p;calDetail(d)});
  el.querySelectorAll(".trow").forEach(e=>e.onclick=()=>{tripSel=e.dataset.id;tripEdit=null;tv=null;tab="trip";show();scrollTo(0,0)});
- $("#cadd").onclick=()=>{tf={id:"",date:d,spots:[],other:"",catch:"",memo:""};tripEdit="new";tripSel=null;tab="trip";show();scrollTo(0,0)};
+ $("#cadd").onclick=()=>{tf={id:"",date:d,end:"",area:"bw",place:"",spots:[],other:"",catch:"",memo:""};tripEdit="new";tripSel=null;tab="trip";show();scrollTo(0,0)};
 }
 const fmt=ms=>{const d=new Date(ms);return`${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:00`};
 function chartRender(root,st,o){const P=o.P||"",Q=id=>root.querySelector("#"+P+id);
@@ -388,60 +388,80 @@ function dayAgg(p,day){const o={code:null,precip:null,wmax:null,dir:null,tmax:nu
 const tripPlaces=t=>{const k=(t.spots||[]).filter(x=>WXP.some(p=>p[0]===x));return k.length?k:WXP.map(p=>p[0])};
 const f1=v=>v==null?"–":(+v).toFixed(1);
 function dayAvg(rs,m,day,pl){const q=rs.filter(r=>r[m]!=null&&r.time.startsWith(day)&&(!pl||r.place===pl));return q.length?q.reduce((t,r)=>t+r[m],0)/q.length:null}
+const tEnd=t=>t.end&&t.end>=t.date?t.end:t.date;
+const tDays=t=>{const a=[];let d=t.date;for(let i=0;i<120&&d<=tEnd(t);i++){a.push(d);d=dstr(d,1)}return a};
+const tripOn=d=>trips.filter(t=>t.date<=d&&d<=tEnd(t));
+const isBw=t=>t.area!=="other";
+const spotLabel=t=>isBw(t)?((t.spots||[]).map(esc).join("、")||"琵琶湖(場所の指定なし)"):"その他: "+esc(t.place||"場所未入力");
+const rangeLabel=t=>t.end&&t.end>t.date?`${md(t.date)}〜${md(t.end)}(${tDays(t).length}日間)`:md(t.date);
+function yearStats(){const Y={};
+ trips.forEach(t=>{const y=t.date.slice(0,4),o=(Y[y]=Y[y]||{n:0,all:new Set(),bw:new Set(),ot:new Set()});o.n++;});
+ trips.forEach(t=>tDays(t).forEach(d=>{const o=(Y[d.slice(0,4)]=Y[d.slice(0,4)]||{n:0,all:new Set(),bw:new Set(),ot:new Set()});o.all.add(d);(isBw(t)?o.bw:o.ot).add(d)}));
+ return Object.keys(Y).sort().reverse().map(y=>({y,n:Y[y].n,all:Y[y].all.size,bw:Y[y].bw.size,ot:Y[y].ot.size}))}
 function trip(){
  const el=$("#v-trip");
- if(tripEdit!==null){const t=tf;
+ if(tripEdit!==null){const t=tf,ot=t.area==="other";
   el.innerHTML=`<div class="card"><b>${tripEdit==="new"?"釣行を追加":"釣行を編集"}</b>
-  <div class="row" style="margin-top:8px"><label>日付<input id="fd" type="date" value="${t.date}"></label></div>
-  <div class="note">行った場所(複数選べます)</div>
+  <div class="row" style="margin-top:8px"><label>開始日<input id="fd" type="date" value="${t.date}"></label><label>終了日(日帰りは空欄)<input id="fe" type="date" value="${t.end||""}"></label></div>
+  <div class="note">釣り場</div>
+  <div class="row"><button class="pl ${ot?"":"pri"}" data-a="bw">琵琶湖</button><button class="pl ${ot?"pri":""}" data-a="other">その他</button></div>
+  <div id="fbw" ${ot?"hidden":""}><div class="note">行った場所(複数選べます)</div>
   <div class="row">${WXP.map(p=>`<button class="pl" data-s="${esc(p[0])}" style="border-color:var(--ac);${t.spots.includes(p[0])?"background:var(--ac);color:#fff":""}">${esc(p[0])}</button>`).join("")}</div>
-  <div class="row"><label>その他の場所(自由入力。「、」で区切る)<input id="fo" value="${esc(t.other)}"></label></div>
-  <div class="row"><label>釣果(任意)<input id="fc" value="${esc(t.catch)}"></label></div>
-  <label class="lbl">メモ(任意)<textarea id="fm" rows="3">${esc(t.memo)}</textarea></label>
+  <div class="row"><label>琵琶湖のその他の場所(自由入力。「、」で区切る)<input id="fo" value="${esc(t.other||"")}"></label></div></div>
+  <div id="fot" ${ot?"":"hidden"}><div class="row"><label>場所(手入力)<input id="fp" value="${esc(t.place||"")}" placeholder="例: 大阪湾、紀の川"></label></div></div>
+  <div class="row"><label>釣果(任意)<input id="fc" value="${esc(t.catch||"")}"></label></div>
+  <label class="lbl">メモ(任意)<textarea id="fm" rows="3">${esc(t.memo||"")}</textarea></label>
   <div class="row"><button class="pri" id="fs">保存</button><button id="fx">キャンセル</button></div></div>`;
   el.querySelectorAll("button[data-s]").forEach(b=>b.onclick=()=>{const s=b.dataset.s,i=tf.spots.indexOf(s);if(i<0)tf.spots.push(s);else tf.spots.splice(i,1);const on=tf.spots.includes(s);b.style.background=on?"var(--ac)":"";b.style.color=on?"#fff":""});
+  el.querySelectorAll("button[data-a]").forEach(b=>b.onclick=()=>{tf.area=b.dataset.a;const o=tf.area==="other";$("#fbw").hidden=o;$("#fot").hidden=!o;el.querySelectorAll("button[data-a]").forEach(x=>x.classList.toggle("pri",x.dataset.a===tf.area))});
   $("#fx").onclick=()=>{tripEdit=null;trip()};
-  $("#fs").onclick=()=>{const date=$("#fd").value;if(!date)return;const oth=$("#fo").value.split(/[、,]/).map(x=>x.trim()).filter(Boolean),sp=[...new Set(tf.spots.concat(oth))];
-   const o={id:tf.id||Date.now().toString(36),date,spots:sp,catch:$("#fc").value.trim(),memo:$("#fm").value.trim()};
+  $("#fs").onclick=()=>{const date=$("#fd").value;if(!date)return;let end=$("#fe").value||"";if(end<=date)end="";
+   const o2=tf.area==="other",oth=($("#fo").value||"").split(/[、,]/).map(x=>x.trim()).filter(Boolean),sp=o2?[]:[...new Set(tf.spots.concat(oth))];
+   const o={id:tf.id||Date.now().toString(36),date,end,area:o2?"other":"bw",place:o2?($("#fp").value||"").trim():"",spots:sp,catch:$("#fc").value.trim(),memo:$("#fm").value.trim()};
    const i=trips.findIndex(x=>x.id===o.id);if(i<0)trips.push(o);else trips[i]=o;saveTrips();tripEdit=null;tripSel=o.id;tv=null;trip()};
   return}
  if(tripSel){const t=trips.find(x=>x.id===tripSel);if(!t){tripSel=null;return trip()}
-  if(wxNeed())loadWx();[t.date,dstr(t.date,-5),dstr(t.date,2)].forEach(d=>loadWxHr(+d.slice(0,4)));
+  const e0=tEnd(t),bw=isBw(t),days=tDays(t),head=`<div class="card"><div class="row"><button id="tb">← 一覧</button><span style="flex:1"></span><button id="te">編集</button><button id="td">削除</button></div>
+  <div style="font-size:18px"><b>${rangeLabel(t)}</b> ${t.date.slice(0,4)}年</div>
+  <div style="margin-top:4px">📍 ${spotLabel(t)}</div>
+  ${t.catch?`<div style="margin-top:4px">🎣 ${esc(t.catch)}</div>`:""}${t.memo?`<div class="note" style="margin-top:4px;white-space:pre-wrap">${esc(t.memo)}</div>`:""}</div>`;
+  const bind=()=>{
+   $("#tb").onclick=()=>{tripSel=null;tv=null;trip()};
+   $("#te").onclick=()=>{tf={id:t.id,date:t.date,end:t.end||"",area:t.area==="other"?"other":"bw",place:t.place||"",spots:(t.spots||[]).filter(x=>WXP.some(p=>p[0]===x)),other:(t.spots||[]).filter(x=>!WXP.some(p=>p[0]===x)).join("、"),catch:t.catch||"",memo:t.memo||""};tripEdit=t.id;trip()};
+   $("#td").onclick=()=>{if(confirm("この釣行記録を削除しますか?")){trips=trips.filter(x=>x.id!==t.id);saveTrips();tripSel=null;tv=null;trip()}}};
+  if(!bw){let rows="";days.forEach(d=>{rows+=`<tr class="hl"><td>${md(d)} 釣行</td><td>${tideOf(d)}</td></tr>`});
+   el.innerHTML=head+`<div class="card scroll"><b>釣行日の潮名</b><table><tr><th>日付</th><th>潮</th></tr>${rows}</table><p class="note">琵琶湖以外の場所では、天気・水温などのデータは表示しません。潮名は月齢から計算した目安です。</p></div>`;bind();return}
+  if(wxNeed())loadWx();[t.date,dstr(t.date,-5),dstr(e0,2)].forEach(d=>loadWxHr(+d.slice(0,4)));
   const pls=tripPlaces(t);if(!pls.includes(tripPl))tripPl=pls[0];
-  const rs=all(),td=nowStr().slice(0,10);let rows="";
-  for(let n=-5;n<=2;n++){const d=dstr(t.date,n),g=dayAgg(tripPl,d),lv=dayAvg(rs,"level",d,"琵琶湖(平均)")??dayAvg(rs,"level",d,"雄琴沖"),fl=dayAvg(rs,"flow",d);
-   rows+=`<tr class="${n===0?"hl":""}"><td>${md(d)}${n===0?" 釣行":""}</td><td>${tideOf(d)}</td><td>${g.code==null?"–":WXE(g.code)+" "+WXN(g.code)}</td><td class="n">${g.precip==null?"–":f1(g.precip)+"mm"}</td><td>${g.dir==null?"–":arrow(g.dir)+" "+dirN(g.dir)}</td><td class="n">${f1(g.wmax)}</td><td class="n">${g.tmin==null?"–":Math.round(g.tmin)+"〜"+Math.round(g.tmax)+"℃"}</td><td class="n">${lv==null?"–":lv.toFixed(2)}</td><td class="n">${fl==null?"–":fl.toFixed(0)}</td></tr>`}
-  el.innerHTML=`<div class="card"><div class="row"><button id="tb">← 一覧</button><span style="flex:1"></span><button id="te">編集</button><button id="td">削除</button></div>
-  <div style="font-size:18px"><b>${md(t.date)}</b> ${t.date.slice(0,4)}年　${tideOf(t.date)}</div>
-  <div style="margin-top:4px">📍 ${(t.spots||[]).map(esc).join("、")||"場所の指定なし"}</div>
-  ${t.catch?`<div style="margin-top:4px">🎣 ${esc(t.catch)}</div>`:""}${t.memo?`<div class="note" style="margin-top:4px;white-space:pre-wrap">${esc(t.memo)}</div>`:""}</div>
-  <div class="card scroll"><b>天気(5日前〜2日後)</b><div class="row" style="margin:6px 0">${pls.map(p=>`<button class="pl ${p===tripPl?"pri":""}" data-p="${esc(p)}">${esc(p)}</button>`).join("")}</div>
+  const rs=all();let rows="";
+  for(let d=dstr(t.date,-5),g0=0;d<=dstr(e0,2)&&g0<130;d=dstr(d,1),g0++){const on=d>=t.date&&d<=e0,g=dayAgg(tripPl,d),lv=dayAvg(rs,"level",d,"琵琶湖(平均)")??dayAvg(rs,"level",d,"雄琴沖"),fl=dayAvg(rs,"flow",d);
+   rows+=`<tr class="${on?"hl":""}"><td>${md(d)}${on?" 釣行":""}</td><td>${tideOf(d)}</td><td>${g.code==null?"–":WXE(g.code)+" "+WXN(g.code)}</td><td class="n">${g.precip==null?"–":f1(g.precip)+"mm"}</td><td>${g.dir==null?"–":arrow(g.dir)+" "+dirN(g.dir)}</td><td class="n">${f1(g.wmax)}</td><td class="n">${g.tmin==null?"–":Math.round(g.tmin)+"〜"+Math.round(g.tmax)+"℃"}</td><td class="n">${lv==null?"–":lv.toFixed(2)}</td><td class="n">${fl==null?"–":fl.toFixed(0)}</td></tr>`}
+  el.innerHTML=head+`<div class="card scroll"><b>天気(5日前〜釣行後2日)</b><div class="row" style="margin:6px 0">${pls.map(p=>`<button class="pl ${p===tripPl?"pri":""}" data-p="${esc(p)}">${esc(p)}</button>`).join("")}</div>
   <table><tr><th>日付</th><th>潮</th><th>天気</th><th class="n">雨量</th><th>風向</th><th class="n">最大風速</th><th class="n">気温</th><th class="n">水位</th><th class="n">放流量</th></tr>${rows}</table>
   <p class="note">雨量は1日の合計(mm)、風速はm/s、水位は琵琶湖の1日の平均(m)、放流量は手入力の値(m³/s)です。データがない日は「–」です。${wxD||Object.keys(wxHr).length?"":" 天気を読み込み中…"}</p></div>
   <div id="tchart"></div>`;
-  $("#tb").onclick=()=>{tripSel=null;tv=null;trip()};
-  $("#te").onclick=()=>{tf={id:t.id,date:t.date,spots:(t.spots||[]).filter(x=>WXP.some(p=>p[0]===x)),other:(t.spots||[]).filter(x=>!WXP.some(p=>p[0]===x)).join("、"),catch:t.catch||"",memo:t.memo||""};tripEdit=t.id;trip()};
-  $("#td").onclick=()=>{if(confirm("この釣行記録を削除しますか?")){trips=trips.filter(x=>x.id!==t.id);saveTrips();tripSel=null;tv=null;trip()}};
+  bind();
   el.querySelectorAll("button[data-p]").forEach(b=>b.onclick=()=>{tripPl=b.dataset.p;trip()});
-  if(!tv||tv.tid!==t.id)tv={tid:t.id,cm:"temp",rng:"c",cs:dstr(t.date,-5),ce:dstr(t.date,2),yr:{},base:view.base,hide:[]};
-  const root=$("#tchart"),op={P:"t",fixed:true,band:[new Date(t.date+"T00:00").getTime(),new Date(t.date+"T23:59").getTime()],save:()=>{},rerender:()=>chartRender(root,tv,op)};
+  if(!tv||tv.tid!==t.id)tv={tid:t.id,cm:"temp",rng:"c",cs:dstr(t.date,-5),ce:dstr(e0,2),yr:{},base:view.base,hide:[]};
+  const root=$("#tchart"),op={P:"t",fixed:true,band:[new Date(t.date+"T00:00").getTime(),new Date(e0+"T23:59").getTime()],save:()=>{},rerender:()=>chartRender(root,tv,op)};
   chartRender(root,tv,op);return}
- const L=trips.slice().sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
- if(L.length&&wxNeed())loadWx();if(L.length)[...new Set(L.map(t=>+t.date.slice(0,4)))].forEach(loadWxHr);
+ const L=trips.slice().sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0),ST=yearStats();
+ if(L.length&&wxNeed())loadWx();if(L.length)[...new Set(L.filter(isBw).map(t=>+t.date.slice(0,4)))].forEach(loadWxHr);
  el.innerHTML=`<div class="card"><div class="row"><b style="flex:1;font-size:17px">釣行の記録</b><button class="pri" id="tn">＋ 追加</button></div>
   <p class="note">記録はこの端末のブラウザにだけ保存されます。バックアップは下から書き出せます。</p>
-  ${L.length?L.map(t=>{const pl=tripPlaces(t)[0],g=dayAgg(pl,t.date);
-   return`<div class="trow" data-id="${t.id}"><b>${md(t.date)}</b> ${t.date.slice(0,4)}　${tideOf(t.date)}<br>📍 ${(t.spots||[]).map(esc).join("、")||"場所の指定なし"}
-   <div class="note">${g.code==null?"天気データなし":`${WXE(g.code)} ${WXN(g.code)}・雨${f1(g.precip)}mm・${g.dir==null?"":dirN(g.dir)+" "}最大${f1(g.wmax)}m/s`}${t.catch?"　🎣 "+esc(t.catch):""}</div></div>`}).join(""):'<p class="note">まだ記録がありません。「＋ 追加」から登録できます。</p>'}</div>
+  ${ST.length?`<div class="lbl">年間の釣行日数</div>`+ST.map(x=>`<div style="margin:2px 0"><b>${x.y}年</b>　<b style="font-size:18px">${x.all}</b>日　<span class="note">釣行${x.n}回(琵琶湖 ${x.bw}日・その他 ${x.ot}日)</span></div>`).join("")+`<div style="height:6px"></div>`:""}
+  ${L.length?L.map(t=>{const bw=isBw(t),g=bw?dayAgg(tripPlaces(t)[0],t.date):null;
+   return`<div class="trow" data-id="${t.id}"><b>${rangeLabel(t)}</b> ${t.date.slice(0,4)}　${tideOf(t.date)}<br>📍 ${spotLabel(t)}
+   <div class="note">${bw?(g.code==null?"天気データなし":`${WXE(g.code)} ${WXN(g.code)}・雨${f1(g.precip)}mm・${g.dir==null?"":dirN(g.dir)+" "}最大${f1(g.wmax)}m/s`):""}${t.catch?"　🎣 "+esc(t.catch):""}</div></div>`}).join(""):'<p class="note">まだ記録がありません。「＋ 追加」から登録できます。</p>'}</div>
   <div class="card"><b>バックアップ</b><p class="note">釣行の記録を文字として書き出し・読み込みできます。書き出した文字は、メモアプリなどに保存してください。</p>
   <div class="row"><button id="xb">書き出す</button><button id="ib">読み込む</button></div><textarea id="xt" rows="5"></textarea><div class="row"><button id="xo" class="pri" hidden>取り込む</button></div></div>`;
- $("#tn").onclick=()=>{tf={id:"",date:nowStr().slice(0,10),spots:[],other:"",catch:"",memo:""};tripEdit="new";trip()};
+ $("#tn").onclick=()=>{tf={id:"",date:nowStr().slice(0,10),end:"",area:"bw",place:"",spots:[],other:"",catch:"",memo:""};tripEdit="new";trip()};
  el.querySelectorAll(".trow").forEach(e=>e.onclick=()=>{tripSel=e.dataset.id;tv=null;trip();scrollTo(0,0)});
  const xt=$("#xt");
  $("#xb").onclick=()=>{xt.value=JSON.stringify(trips);$("#xo").hidden=true;xt.select()};
  $("#ib").onclick=()=>{xt.value="";xt.placeholder="ここに書き出した文字を貼って、「取り込む」を押してください";$("#xo").hidden=false;xt.focus()};
- $("#xo").onclick=()=>{try{const a=JSON.parse(xt.value);if(!Array.isArray(a))throw 0;let n=0;const have=new Set(trips.map(t=>t.id));
-  a.forEach(t=>{if(t&&t.id&&/^\d{4}-\d\d-\d\d$/.test(t.date)&&!have.has(t.id)){trips.push({id:String(t.id),date:t.date,spots:Array.isArray(t.spots)?t.spots.map(String):[],catch:String(t.catch||""),memo:String(t.memo||"")});have.add(t.id);n++}});
+ $("#xo").onclick=()=>{try{const a=JSON.parse(xt.value);if(!Array.isArray(a))throw 0;let n=0;const have=new Set(trips.map(t=>t.id)),ok=x=>/^\d{4}-\d\d-\d\d$/.test(x||"");
+  a.forEach(t=>{if(t&&t.id&&ok(t.date)&&!have.has(t.id)){trips.push({id:String(t.id),date:t.date,end:ok(t.end)?t.end:"",area:t.area==="other"?"other":"bw",place:String(t.place||""),spots:Array.isArray(t.spots)?t.spots.map(String):[],catch:String(t.catch||""),memo:String(t.memo||"")});have.add(t.id);n++}});
   saveTrips();alert(n+" 件を取り込みました");trip()}catch(e){alert("読み込めませんでした。書き出した文字をそのまま貼ってください")}};
 }
 function nowStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`}
