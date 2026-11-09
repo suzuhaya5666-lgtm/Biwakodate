@@ -521,6 +521,26 @@ function yearStats(){const Y={};
  trips.forEach(t=>{const y=t.date.slice(0,4),o=(Y[y]=Y[y]||{n:0,all:new Set(),bw:new Set(),ot:new Set()});o.n++;});
  trips.forEach(t=>tDays(t).forEach(d=>{const o=(Y[d.slice(0,4)]=Y[d.slice(0,4)]||{n:0,all:new Set(),bw:new Set(),ot:new Set()});o.all.add(d);(isBw(t)?o.bw:o.ot).add(d)}));
  return Object.keys(Y).sort().reverse().map(y=>({y,n:Y[y].n,all:Y[y].all.size,bw:Y[y].bw.size,ot:Y[y].ot.size}))}
+function catchCard(){
+ const W=z=>{const v=parseFloat(z.w);if(!(v>0))return 0;return z.wu==="kg"?v*1000:z.wu==="oz"?v*28.35:v};
+ const S={},M=Array(12).fill(0),rs=all();let tot=0,td=new Set();
+ trips.forEach(t=>(t.fish||[]).forEach(f=>{const o=(S[f.sp]=S[f.sp]||{n:0,d:new Set(),ml:0,mw:0,mlD:"",mwD:"",c:[]});o.n+=f.n;o.d.add(t.date);tot+=f.n;td.add(t.date);M[+t.date.slice(5,7)-1]+=f.n;
+  (f.sz||[]).forEach(z=>{const l=parseFloat(z.len)||0,w=W(z);if(l>o.ml){o.ml=l;o.mlD=t.date}if(w>o.mw){o.mw=w;o.mwD=t.date}});
+  if(isBw(t)){const tp=dayAvg(rs,"temp",t.date),lv=dayAvg(rs,"level",t.date,"琵琶湖(平均)")??dayAvg(rs,"level",t.date,"雄琴沖"),cl=lclimAt(new Date(t.date+"T12:00").getTime(),"r10");
+   o.c.push({n:f.n,tp,dl:lv!=null&&cl?(lv-cl.m)*100:null})}}));
+ const sp=Object.keys(S).sort((a,b)=>S[b].n-S[a].n);
+ if(!sp.length)return`<div class="card"><b>釣果の集計</b><p class="note">釣果(魚種と本数)を記録すると、ここに集計が出ます。</p></div>`;
+ const mx=Math.max(...M,1),wt=g=>g>=1000?(g/1000).toFixed(2).replace(/\.?0+$/,"")+"kg":Math.round(g)+"g";
+ const avg=(c,k)=>{const q=c.filter(x=>x[k]!=null);const n=q.reduce((a,x)=>a+x.n,0);return q.length>=3&&n?{v:q.reduce((a,x)=>a+x[k]*x.n,0)/n,d:q.length}:null};
+ let h=`<div class="card"><b>釣果の集計</b><p class="note">${td.size}日・合計${tot}本(釣果を記録した釣行のみ)</p>
+ <div class="lbl">魚種別</div><table><tr><th>魚種</th><th class="n">本数</th><th class="n">日数</th><th>最大</th></tr>`
+ +sp.map(k=>{const o=S[k];return`<tr><td>${esc(k)}</td><td class="n">${o.n}</td><td class="n">${o.d.size}</td><td>${o.ml?o.ml+"cm":""}${o.ml&&o.mw?" / ":""}${o.mw?wt(o.mw):""}${!o.ml&&!o.mw?"–":""}</td></tr>`}).join("")+`</table>
+ <div class="lbl" style="margin-top:8px">月別の本数</div>`
+ +M.map((v,i)=>v?`<div style="display:flex;align-items:center;gap:6px;margin:1px 0"><span style="width:34px">${i+1}月</span><span style="height:10px;border-radius:5px;background:var(--ac);width:${Math.max(4,v/mx*60)}%"></span><span class="note">${v}</span></div>`:"").join("")
+ +`<div class="lbl" style="margin-top:8px">釣れた日の条件(琵琶湖の釣行のみ)</div>`;
+ const cs=sp.map(k=>{const t=avg(S[k].c,"tp"),d=avg(S[k].c,"dl");return t||d?`<div style="margin:3px 0"><b>${esc(k)}</b>　${t?"水温 平均"+t.v.toFixed(1)+"℃":""}${t&&d?"・":""}${d?"水位 平年比"+(d.v>=0?"+":"")+d.v.toFixed(0)+"cm":""}<span class="note">(${(t||d).d}日分)</span></div>`:""}).join("");
+ h+=cs||'<p class="note">データが足りません。水温・水位のある日の釣果が3日分たまると表示されます。</p>';
+ return h+`<p class="note">本数で重みをつけた平均です。水温は観測地点の平均、水位は直近10年の平年との差です。</p></div>`}
 function trip(){
  const el=$("#v-trip");
  if(tripEdit!==null){const t=tf,ot=t.area==="other";tf.fish=Array.isArray(tf.fish)?tf.fish:[];tf.tk=tf.tk||{};tf.tm=tf.tm||{};tf.photos=tf.photos||[];tf.fish.forEach(fixFish);
@@ -586,7 +606,7 @@ function trip(){
   ${L.length?L.map(t=>{const bw=isBw(t),g=bw?dayAgg(tripPlaces(t)[0],t.date):null;
    return`<div class="trow" data-id="${t.id}">${t.photos&&t.photos[0]&&thumbs[t.photos[0]]?`<img src="${thumbs[t.photos[0]]}" style="float:right;width:56px;height:56px;object-fit:cover;border-radius:8px;margin-left:8px">`:""}<b>${rangeLabel(t)}</b> ${t.date.slice(0,4)}　${tideOf(t.date)}<br>📍 ${spotLabel(t)}
    <div class="note">${bw?(g.code==null?"天気データなし":`${WXE(g.code)} ${WXN(g.code)}・雨${f1(g.precip)}mm・${g.dir==null?"":dirN(g.dir)+" "}最大${f1(g.wmax)}m/s`):""}${fishSum(t)?"　🐟 "+fishSum(t):""}${t.catch?"　🎣 "+esc(t.catch):""}</div></div>`}).join(""):'<p class="note">まだ記録がありません。「＋ 追加」から登録できます。</p>'}</div>
-  <div class="card"><b>バックアップ</b><p class="note">釣行の記録を文字として書き出し・読み込みできます。書き出した文字は、メモアプリなどに保存してください。</p>
+  ${(()=>{try{return catchCard()}catch(e){return""}})()}<div class="card"><b>バックアップ</b><p class="note">釣行の記録を文字として書き出し・読み込みできます。書き出した文字は、メモアプリなどに保存してください。</p>
   <div class="row"><button id="xb">書き出す</button><button id="ib">読み込む</button></div><textarea id="xt" rows="5"></textarea><div class="row"><button id="xo" class="pri" hidden>取り込む</button></div></div>`;
  $("#tn").onclick=()=>{tf={id:"",date:nowStr().slice(0,10),end:"",area:"bw",place:"",spots:[],other:"",catch:"",memo:""};tripEdit="new";trip()};
  el.querySelectorAll(".trow").forEach(e=>e.onclick=()=>{tripSel=e.dataset.id;tv=null;trip();scrollTo(0,0)});
