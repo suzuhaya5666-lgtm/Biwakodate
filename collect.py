@@ -212,7 +212,7 @@ def collect_alerts():
     for e in entries:
         if not isinstance(e, dict):
             continue
-        report = report or str(e.get("reportDatetime", ""))
+        report = max(report, str(e.get("reportDatetime", "")))  # 一番新しい発表時刻
         w = e.get("warning")
         if not isinstance(w, dict):
             continue
