@@ -19,7 +19,7 @@ nav button.on,button.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal .h{text-align:center;color:var(--sub);font-size:12px}
 .d{min-height:64px;border-radius:8px;padding:4px;font-size:12px;background:var(--sml)}
-.d b{font-size:13px}.d.大潮{background:var(--big)}.d.中潮{background:var(--mid)}.d.t{outline:2px solid var(--ac)}
+.d b{font-size:13px}.d.大潮{background:var(--big)}.d.中潮{background:var(--mid)}.d.t{outline:2px solid var(--ac)}.d.sel{outline:3px solid #d1242f}
 .d span{display:block;color:var(--sub);font-size:11px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
 .row label{display:flex;flex-direction:column;font-size:12px;color:var(--sub);flex:1;min-width:110px}
@@ -142,7 +142,7 @@ const LAKE=[[283.4,37.4],[281.1,37.4],[279.5,39.6],[281.1,53.2],[278.3,56.6],[27
 const WXU="https://api.open-meteo.com/v1/forecast?latitude="+WXP.map(p=>p[1]).join(",")+"&longitude="+WXP.map(p=>p[2]).join(",")+"&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&hourly=weather_code,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m&daily=precipitation_sum,weather_code,wind_speed_10m_max,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&wind_speed_unit=ms&past_days=2&forecast_days=2";
 const WD_URLS=[REPO.replace("history/","")+"weather_daily.csv","data/weather_daily.csv"];
 const WXN=c=>c===0?"快晴":c===1?"晴れ":c===2?"薄曇り":c===3?"曇り":c<=48?"霧":c<=57?"霧雨":c<=65?"雨":c<=67?"みぞれ":c<=77?"雪":c<=82?"にわか雨":c<=86?"にわか雪":"雷雨";
-let wxD=null,wxAt=0,wxErr="",wxSel=-1,wxBusy=false,wxMode="h",wxHist=null,wxW=null,wxG=null,wxK=-1,wxOn=true;
+let wxD=null,wxAt=0,wxErr="",wxSel=-1,wxBusy=false,wxMode="h",wxHist=null,wxW=null,wxG=null,wxK=-1,wxOn=true,wxTry=0,wxF=null,wxFTry=0;
 const WXE=c=>c===0?"☀️":c===1?"🌤":c===2?"⛅":c===3?"☁️":c<=48?"🌫":c<=57?"🌦":c<=67?"🌧":c<=77?"🌨":c<=82?"🌧":c<=86?"🌨":"⛈";
 const DIRN=["北","北東","東","南東","南","南西","西","北西"],dirN=d=>DIRN[Math.round(d/45)%8];
 const arrow=d=>`<span style="display:inline-block;transform:rotate(${d+180}deg)">↑</span>`;
@@ -151,10 +151,16 @@ async function loadWxHist2(){for(const u of WD_URLS){try{const r=await fetch(u+"
   ls.forEach(l=>{const c=l.split(","),x={};hd.forEach((k,i)=>x[k]=c[i]);(o[x.place]=o[x.place]||{})[x.date]={code:num(x.code),precip:num(x.precip),wmax:num(x.wmax),tmax:num(x.tmax),tmin:num(x.tmin)}});
   wxHist=o;return}catch(e){}}
  if(!wxHist)wxHist={}}
-async function loadWx(){if(wxBusy)return;wxBusy=true;loadWxHist2().then(()=>{if(tab==="wx"&&wxSel>=0)wx();else if(tab==="trip")trip()});
+const wxNeed=()=>!wxD&&!wxBusy&&Date.now()-wxTry>60e3;
+const WXFU="https://api.open-meteo.com/v1/forecast?latitude="+WXP.map(p=>p[1]).join(",")+"&longitude="+WXP.map(p=>p[2]).join(",")+"&daily=weather_code&timezone=Asia%2FTokyo&forecast_days=14";
+async function loadWxF(){wxFTry=Date.now();try{const r=await fetch(WXFU);if(!r.ok)throw new Error(r.status);const j=await r.json(),a=Array.isArray(j)?j:[j],o={};
+  WXP.forEach((p,i)=>{const d=a[i]&&a[i].daily;if(!d)return;o[p[0]]={};d.time.forEach((t,k)=>{if(d.weather_code[k]!=null)o[p[0]][t]=d.weather_code[k]})});wxF=o;if(tab==="cal")cal()}catch(e){}}
+function dayCode(p,d){const i=WXP.findIndex(x=>x[0]===p),D=wxD&&i>=0?wxD[i]:null;if(D){const k=D.daily.time.indexOf(d);if(k>=0&&D.daily.weather_code[k]!=null)return D.daily.weather_code[k]}
+ if(wxF&&wxF[p]&&wxF[p][d]!=null&&d>=nowStr().slice(0,10))return wxF[p][d];const h=wxHist&&wxHist[p]&&wxHist[p][d];return h&&h.code!=null?h.code:null}
+async function loadWx(){if(wxBusy)return;wxBusy=true;wxTry=Date.now();loadWxHist2().then(()=>{if(tab==="wx"&&wxSel>=0)wx();else if(tab==="trip")trip();else if(tab==="cal")cal()});
  try{const r=await fetch(WXU);if(!r.ok)throw new Error(r.status);const j=await r.json();wxD=Array.isArray(j)?j:[j];wxW=null;wxAt=Date.now();wxErr=""}
  catch(e){wxErr="天気を読み込めませんでした("+e.message+")"}
- wxBusy=false;if(tab==="wx")wx();else if(tab==="trip")trip()}
+ wxBusy=false;if(tab==="wx")wx();else if(tab==="trip")trip();else if(tab==="cal")cal()}
 const TAU=4/Math.LN10;
 function wxGeo(){if(wxG)return wxG;
  const D=LAKE.map(p=>p.slice()),W=Math.round(LAKE_W),H=Math.round(LAKE_H),d="M"+D.map(p=>p.join(",")).join("L")+"Z";
@@ -192,7 +198,7 @@ function wxLab(k){if(!wxD)return"";const t=wxD[0].hourly.time[k],td=wxD[0].curre
 function wxPaint(){if(!wxD)return;const k=wxK;
  const a=$("#wxs"),b=$("#wxp"),l=$("#wlab"),sl=$("#wsl");if(a)a.innerHTML=shoreSvg(k);if(b)b.innerHTML=pinsSvg(k);if(l)l.textContent=wxLab(k);if(sl)sl.value=k}
 function wx(){
- if(!wxD||Date.now()-wxAt>15*60e3)loadWx();
+ if((!wxD||Date.now()-wxAt>15*60e3)&&Date.now()-wxTry>60e3)loadWx();
  if(wxD&&!wxW){try{wxW=wxWave()}catch(e){wxW=null}}
  if(wxD&&(wxK<0||wxK>=wxD[0].hourly.time.length))wxK=nowIdx();
  const G=wxGeo(),W=G.W,H=G.H,N=wxD?wxD[0].hourly.time.length:1,K=Math.max(0,wxK);
@@ -266,14 +272,42 @@ function now(){
  $("#v-now").innerHTML=h;
  const b=$("#bs");if(b){b.value=view.base;b.onchange=e=>{view.base=e.target.value;saveView();now()}}
 }
+let calSel=null,calPl="彦根",calPick=false;
 function cal(){
  const y=cur.getFullYear(),m=cur.getMonth(),n=new Date(y,m+1,0).getDate(),f=new Date(y,m,1).getDay(),t=new Date();
- let h=`<div class="card"><div class="row"><button id="pv">←</button><b style="flex:1;text-align:center">${y}年${m+1}月</b><button id="nx">→</button></div><div class="cal">`;
- h+="日月火水木金土".split("").map(c=>`<div class="h">${c}</div>`).join("")+"<div></div>".repeat(f);
- for(let d=1;d<=n;d++){const a=age(y,m,d),s=shio(a),td=t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d;
-  h+=`<div class="d ${s} ${td?"t":""}"><b>${d}</b> ${moon(a)}<span>${s}</span><span>月齢${a.toFixed(1)}</span></div>`}
- $("#v-cal").innerHTML=h+`</div><p class="note">潮名は月齢から計算した目安です。公開されている潮名と1日ずれる場合があります。</p></div>`;
+ let h=`<div class="card"><div class="row"><button id="pv">←</button><b id="ch" style="flex:1;text-align:center;cursor:pointer;padding:6px 0">${y}年${m+1}月 ▾</b><button id="nx">→</button></div>`;
+ if(calPick)h+=`<div class="row"><select id="cy">${Array.from({length:46},(_,i)=>1995+i).map(v=>`<option value="${v}"${v===y?" selected":""}>${v}年</option>`).join("")}</select><select id="cmn">${Array.from({length:12},(_,i)=>`<option value="${i}"${i===m?" selected":""}>${i+1}月</option>`).join("")}</select><button id="ct">今月</button></div>`;
+ h+=`<div class="row"><label style="flex:1">天気マークの地点<select id="cpl">${WXP.map(p=>`<option value="${esc(p[0])}"${p[0]===calPl?" selected":""}>${esc(p[0])}</option>`).join("")}</select></label></div><div class="cal">`+"日月火水木金土".split("").map(c=>`<div class="h">${c}</div>`).join("")+"<div></div>".repeat(f);
+ for(let d=1;d<=n;d++){const a=age(y,m,d),sh=shio(a),ds=`${y}-${pad(m+1)}-${pad(d)}`,wc=dayCode(calPl,ds),td=t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d,tr=trips.some(x=>x.date===ds);
+  h+=`<div class="d ${sh} ${td?"t":""}${calSel===ds?" sel":""}" data-d="${ds}" style="cursor:pointer"><b>${d}</b> ${moon(a)}${tr?" 🎣":""}<span>${sh}</span><span style="font-size:16px;color:var(--tx)">${wc!=null?WXE(wc):""}</span></div>`}
+ h+=`</div><p class="note">潮名は月齢から計算した目安です。公開されている潮名と1日ずれる場合があります。日付をタップすると、その日のデータが見られます。天気のマークは、過去は記録、今日から先は予報です。</p></div>`;
+ if(calSel)h+=`<div id="cdet"></div>`;
+ $("#v-cal").innerHTML=h;
  $("#pv").onclick=()=>{cur=new Date(y,m-1,1);cal()};$("#nx").onclick=()=>{cur=new Date(y,m+1,1);cal()};
+ $("#ch").onclick=()=>{calPick=!calPick;cal()};
+ $("#cpl").onchange=e=>{calPl=e.target.value;cal()};
+ if(wxNeed())loadWx();if(!wxF&&Date.now()-wxFTry>60e3)loadWxF();
+ if(calPick){$("#cy").onchange=e=>{cur=new Date(+e.target.value,m,1);cal()};$("#cmn").onchange=e=>{cur=new Date(y,+e.target.value,1);cal()};$("#ct").onclick=()=>{cur=new Date();calPick=false;cal()}}
+ $("#v-cal").querySelectorAll(".d[data-d]").forEach(e=>e.onclick=()=>{calSel=e.dataset.d;calPick=false;cal();const x=$("#cdet");if(x&&x.scrollIntoView)x.scrollIntoView({behavior:"smooth",block:"start"})});
+ if(calSel)calDetail(calSel);
+}
+function calDetail(d){
+ const el=$("#cdet");if(!el)return;
+ if(wxNeed())loadWx();loadWxHr(+d.slice(0,4));
+ const g=dayAgg(calPl,d),rs=all().concat(hist),tmp=["雄琴沖","唐橋(瀬田川)","安曇川沖"].map(p=>{const q=rs.filter(r=>r.place===p&&r.temp!=null&&r.time.startsWith(d)).map(r=>r.temp);return q.length?`${p} <b>${(q.reduce((a,b)=>a+b,0)/q.length).toFixed(1)}</b>℃${q.length>1?`(${Math.min(...q).toFixed(1)}〜${Math.max(...q).toFixed(1)})`:""}`:null}).filter(Boolean),
+  lv=dayAvg(rs,"level",d,"琵琶湖(平均)")??dayAvg(rs,"level",d,"雄琴沖"),fl=dayAvg(rs,"flow",d),a=age(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8)),tl=trips.filter(x=>x.date===d);
+ el.innerHTML=`<div class="card"><div class="row"><b style="flex:1;font-size:17px">${md(d)} ${d.slice(0,4)}年</b><button id="cx">閉じる</button></div>
+ <div>${moon(a)} <b>${shio(a)}</b> <span class="note">月齢${a.toFixed(1)}</span></div>
+ <div class="lbl" style="margin-top:10px">天気</div><div class="row" style="margin:4px 0">${WXP.map(p=>`<button class="pl ${p[0]===calPl?"pri":""}" data-p="${esc(p[0])}">${esc(p[0])}</button>`).join("")}</div>
+ <div>${g.code==null?'<span class="note">この日の天気データはありません</span>':`${WXE(g.code)} <b>${WXN(g.code)}</b>　雨 ${f1(g.precip)}mm　${g.dir==null?"":arrow(g.dir)+" "+dirN(g.dir)+" "}最大 ${f1(g.wmax)}m/s　気温 ${g.tmin==null?"–":Math.round(g.tmin)+"〜"+Math.round(g.tmax)+"℃"}`}</div>
+ <div class="lbl" style="margin-top:10px">水温(日平均)</div><div>${tmp.length?tmp.map(x=>`<span class="chip">${x}</span>`).join(""):'<span class="note">データなし</span>'}</div>
+ <div class="lbl" style="margin-top:6px">水位・放流量</div><div>水位 <b>${lv==null?"–":lv.toFixed(2)}</b> m　放流量 <b>${fl==null?"–":fl.toFixed(0)}</b> m³/s</div>
+ ${tl.length?`<div class="lbl" style="margin-top:10px">この日の釣行</div>`+tl.map(x=>`<div class="trow" data-id="${x.id}">📍 ${(x.spots||[]).map(esc).join("、")||"場所の指定なし"}${x.catch?"　🎣 "+esc(x.catch):""} ›</div>`).join(""):""}
+ <div class="row" style="margin-top:10px"><button class="pri" id="cadd">この日の釣行を記録する</button></div></div>`;
+ $("#cx").onclick=()=>{calSel=null;cal()};
+ el.querySelectorAll("button[data-p]").forEach(b=>b.onclick=()=>{calPl=b.dataset.p;calDetail(d)});
+ el.querySelectorAll(".trow").forEach(e=>e.onclick=()=>{tripSel=e.dataset.id;tripEdit=null;tv=null;tab="trip";show();scrollTo(0,0)});
+ $("#cadd").onclick=()=>{tf={id:"",date:d,spots:[],other:"",catch:"",memo:""};tripEdit="new";tripSel=null;tab="trip";show();scrollTo(0,0)};
 }
 const fmt=ms=>{const d=new Date(ms);return`${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:00`};
 function chartRender(root,st,o){const P=o.P||"",Q=id=>root.querySelector("#"+P+id);
@@ -341,7 +375,7 @@ async function loadWxHr(y){if(wxHr[y]||wxHrBusy[y])return;wxHrBusy[y]=true;
   for(const l of ls){const c=l.split(","),w=+c[4],dr=+c[5];if(c[4]===""||isNaN(w))continue;const day=c[0].slice(0,10),a=(o[c[1]]=o[c[1]]||{}),x=(a[day]=a[day]||{vx:0,vn:0,mx:0});
    x.vx+=-w*Math.sin(dr*Math.PI/180);x.vn+=-w*Math.cos(dr*Math.PI/180);if(w>x.mx)x.mx=w}
   wxHr[y]=o;break}catch(e){}}
- if(!wxHr[y])wxHr[y]={};wxHrBusy[y]=false;if(tab==="trip")trip()}
+ if(!wxHr[y])wxHr[y]={};wxHrBusy[y]=false;if(tab==="trip")trip();else if(tab==="cal")cal()}
 function dayAgg(p,day){const o={code:null,precip:null,wmax:null,dir:null,tmax:null,tmin:null},h=wxHist&&wxHist[p]&&wxHist[p][day];
  if(h)Object.assign(o,{code:h.code,precip:h.precip,wmax:h.wmax,tmax:h.tmax,tmin:h.tmin});
  const i=WXP.findIndex(x=>x[0]===p),D=wxD&&i>=0?wxD[i]:null;
@@ -372,7 +406,7 @@ function trip(){
    const i=trips.findIndex(x=>x.id===o.id);if(i<0)trips.push(o);else trips[i]=o;saveTrips();tripEdit=null;tripSel=o.id;tv=null;trip()};
   return}
  if(tripSel){const t=trips.find(x=>x.id===tripSel);if(!t){tripSel=null;return trip()}
-  if(!wxD&&!wxBusy)loadWx();[t.date,dstr(t.date,-5),dstr(t.date,2)].forEach(d=>loadWxHr(+d.slice(0,4)));
+  if(wxNeed())loadWx();[t.date,dstr(t.date,-5),dstr(t.date,2)].forEach(d=>loadWxHr(+d.slice(0,4)));
   const pls=tripPlaces(t);if(!pls.includes(tripPl))tripPl=pls[0];
   const rs=all(),td=nowStr().slice(0,10);let rows="";
   for(let n=-5;n<=2;n++){const d=dstr(t.date,n),g=dayAgg(tripPl,d),lv=dayAvg(rs,"level",d,"琵琶湖(平均)")??dayAvg(rs,"level",d,"雄琴沖"),fl=dayAvg(rs,"flow",d);
@@ -393,7 +427,7 @@ function trip(){
   const root=$("#tchart"),op={P:"t",fixed:true,band:[new Date(t.date+"T00:00").getTime(),new Date(t.date+"T23:59").getTime()],save:()=>{},rerender:()=>chartRender(root,tv,op)};
   chartRender(root,tv,op);return}
  const L=trips.slice().sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
- if(L.length&&!wxD&&!wxBusy)loadWx();if(L.length)[...new Set(L.map(t=>+t.date.slice(0,4)))].forEach(loadWxHr);
+ if(L.length&&wxNeed())loadWx();if(L.length)[...new Set(L.map(t=>+t.date.slice(0,4)))].forEach(loadWxHr);
  el.innerHTML=`<div class="card"><div class="row"><b style="flex:1;font-size:17px">釣行の記録</b><button class="pri" id="tn">＋ 追加</button></div>
   <p class="note">記録はこの端末のブラウザにだけ保存されます。バックアップは下から書き出せます。</p>
   ${L.length?L.map(t=>{const pl=tripPlaces(t)[0],g=dayAgg(pl,t.date);
