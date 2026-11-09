@@ -59,6 +59,7 @@ textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1
 <section id="v-chart" hidden></section>
 <section id="v-wx" hidden></section>
 <section id="v-trip" hidden></section>
+<section id="v-nt" hidden></section>
 <section id="v-rec" hidden></section>
 <p class="note">出典: 国土交通省 川の防災情報・水文水質データベース(水位・水温)。潮名は月齢からの計算値です。</p>
 </main>
@@ -77,7 +78,7 @@ const SYN=29.530588853,$=s=>document.querySelector(s);
 const MOONS=["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"];
 const LAB={temp:"水温(℃)",flow:"放流量(m³/s)",level:"水位(m)"};
 const COL=["#1f6feb","#d1242f","#1a7f37","#9a6700","#8250df","#0a7ea4"];
-const TABS=[["wx","マップ"],["now","現在"],["chart","グラフ"],["cal","カレンダー"],["trip","釣行"],["rec","手入力"]];
+const TABS=[["wx","マップ"],["now","現在"],["chart","グラフ"],["cal","カレンダー"],["trip","釣行"],["nt","お知らせ"],["rec","手入力"]];
 const pad=n=>String(n).padStart(2,"0");
 const num=v=>v===""||v==null||isNaN(Number(v))?null:Number(v);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -162,10 +163,10 @@ async function loadWxF(){wxFTry=Date.now();try{const r=await fetch(WXFU);if(!r.o
   WXP.forEach((p,i)=>{const d=a[i]&&a[i].daily;if(!d)return;o[p[0]]={};d.time.forEach((t,k)=>{if(d.weather_code[k]!=null)o[p[0]][t]=d.weather_code[k]})});wxF=o;if(tab==="cal")cal()}catch(e){}}
 function dayCode(p,d){const i=WXP.findIndex(x=>x[0]===p),D=wxD&&i>=0?wxD[i]:null;if(D){const k=D.daily.time.indexOf(d);if(k>=0&&D.daily.weather_code[k]!=null)return D.daily.weather_code[k]}
  if(wxF&&wxF[p]&&wxF[p][d]!=null&&d>=nowStr().slice(0,10))return wxF[p][d];const h=wxHist&&wxHist[p]&&wxHist[p][d];return h&&h.code!=null?h.code:null}
-async function loadWx(){if(wxBusy)return;wxBusy=true;wxTry=Date.now();loadWxHist2().then(()=>{if(tab==="wx"&&wxSel>=0)wx();else if(tab==="trip")trip();else if(tab==="cal")cal()});
+async function loadWx(){if(wxBusy)return;wxBusy=true;wxTry=Date.now();loadWxHist2().then(()=>{if(tab==="wx"&&wxSel>=0)wx();else if(tab==="trip")trip();else if(tab==="nt")notice();else if(tab==="cal")cal()});
  try{const r=await fetch(WXU);if(!r.ok)throw new Error(r.status);const j=await r.json();wxD=Array.isArray(j)?j:[j];wxW=null;wxAt=Date.now();wxErr=""}
  catch(e){wxErr="天気を読み込めませんでした("+e.message+")"}
- wxBusy=false;if(tab==="wx")wx();else if(tab==="trip")trip();else if(tab==="cal")cal()}
+ wxBusy=false;if(tab==="wx")wx();else if(tab==="nt")notice();else if(tab==="trip")trip();else if(tab==="cal")cal()}
 const TAU=4/Math.LN10;
 function wxGeo(){if(wxG)return wxG;
  const D=LAKE.map(p=>p.slice()),W=Math.round(LAKE_W),H=Math.round(LAKE_H),d="M"+D.map(p=>p.join(",")).join("L")+"Z";
@@ -244,7 +245,7 @@ function wx(){
 }
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?"on":""}" data-k="${k}">${n}</button>${k==="cal"?'<span style="flex-basis:100%;height:0"></span>':""}`).join("");
  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.k;show()})}
-function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,wx:wx,trip:trip,rec:rec})[tab]()}
+function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,wx:wx,trip:trip,nt:notice,rec:rec})[tab]()}
 const DP={level:2,flow:1,temp:1};
 function nearest(rs,t,tol){let b=null,bd=1e18;for(const r of rs){const d=Math.abs(new Date(r.time).getTime()-t);if(d<bd){bd=d;b=r}}return b&&bd<=tol?b:null}
 const dif=(a,b,m)=>a&&b?a[m]-b[m]:null;
@@ -617,6 +618,38 @@ function trip(){
   a.forEach(t=>{if(t&&t.id&&ok(t.date)&&!have.has(t.id)){trips.push({id:String(t.id),date:t.date,end:ok(t.end)?t.end:"",area:t.area==="other"?"other":"bw",place:String(t.place||""),spots:Array.isArray(t.spots)?t.spots.map(String):[],catch:String(t.catch||""),memo:String(t.memo||""),photos:Array.isArray(t.photos)?t.photos.map(String):[],fish:cleanFish(t.fish),tk:cleanTk(t.tk),tm:{a:String((t.tm&&t.tm.a)||""),b:String((t.tm&&t.tm.b)||"")}});have.add(t.id);n++}});
   saveTrips();alert(n+" 件を取り込みました");trip()}catch(e){alert("読み込めませんでした。書き出した文字をそのまま貼ってください")}};
 }
+let ntA=null,ntTry=0,ntErr="";
+async function loadAlerts(){ntTry=Date.now();try{const r=await fetch("data/alerts.json?t="+Date.now());if(!r.ok)throw new Error(r.status);ntA=await r.json();ntErr=""}catch(e){ntErr="警報・注意報のデータをまだ読み込めません"}if(tab==="nt")notice()}
+function ntForecast(){const o=[];if(!wxD)return o;const i0=nowIdx(),H=wxD.map(d=>d.hourly),T=WXP.map(p=>p[0]);
+ const sum=(h,a,b)=>{let t=0;for(let i=Math.max(0,a);i<b&&i<h.precipitation.length;i++)t+=h.precipitation[i]||0;return t};
+ const mx=(h,k,a,b)=>{let m=0,at=-1;for(let i=Math.max(0,a);i<b&&i<h[k].length;i++){const v=h[k][i]||0;if(v>m){m=v;at=i}}return{m,at}};
+ const tm=(h,i)=>{const t=h.time[i];return t?(t.slice(5,10).replace("-","/")+" "+t.slice(11,13)+"時"):""};
+ const names=a=>a.slice(0,3).join("・")+(a.length>3?" ほか":"");
+ const R=H.map((h,k)=>({k,f:sum(h,i0,i0+24),p:sum(h,i0-24,i0+1),pk:mx(h,"precipitation",i0,i0+24),g:mx(h,"wind_gusts_10m",i0,i0+24),w:mx(h,"wind_speed_10m",i0,i0+24),th:h.weather_code.slice(i0,i0+24).findIndex(c=>c>=95)}));
+ const top=(arr,f)=>arr.slice().sort((a,b)=>f(b)-f(a));
+ const fr=top(R,x=>x.f)[0];if(fr.f>=50)o.push({lv:2,ic:"🌧",t:"大雨のおそれ(今後24時間)",d:`多いところで合計${fr.f.toFixed(0)}mm(${T[fr.k]})。河川の増水・濁りで釣りに影響が出やすく、岸際や河口は危険です。`});
+ else if(fr.f>=20)o.push({lv:1,ic:"🌧",t:"まとまった雨(今後24時間)",d:`多いところで合計${fr.f.toFixed(0)}mm(${T[fr.k]})。流入河川の濁りに注意。`});
+ const pk=top(R,x=>x.pk.m)[0];if(pk.pk.m>=20)o.push({lv:2,ic:"⛈",t:"激しい雨",d:`1時間${pk.pk.m.toFixed(0)}mmの予報(${T[pk.k]}・${tm(H[pk.k],pk.pk.at)}ごろ)。`});
+ else if(pk.pk.m>=10)o.push({lv:1,ic:"🌦",t:"強めの雨",d:`1時間${pk.pk.m.toFixed(0)}mmの予報(${T[pk.k]}・${tm(H[pk.k],pk.pk.at)}ごろ)。`});
+ const pr=top(R,x=>x.p)[0];if(pr.p>=50)o.push({lv:1,ic:"🟤",t:"大雨のあと(直近24時間)",d:`多いところで${pr.p.toFixed(0)}mmの雨が降りました(${T[pr.k]})。川の増水や濁り、水位上昇が出ている可能性があります。`});
+ const g=top(R,x=>x.g.m)[0];if(g.g.m>=15)o.push({lv:2,ic:"💨",t:"強風(突風15m/s以上)",d:`${T[g.k]}で最大${g.g.m.toFixed(0)}m/s(${tm(H[g.k],g.g.at)}ごろ)。出船や岸釣りは危険です。`});
+ else if(g.g.m>=10)o.push({lv:1,ic:"💨",t:"風が強め(突風10m/s以上)",d:`${T[g.k]}で最大${g.g.m.toFixed(0)}m/s(${tm(H[g.k],g.g.at)}ごろ)。波が立ちやすくなります。`});
+ const th=R.filter(x=>x.th>=0);if(th.length){const f=th.sort((a,b)=>a.th-b.th)[0];o.push({lv:2,ic:"⚡",t:"雷の予報",d:`${names(th.map(x=>T[x.k]))}で雷雨の予報(${tm(H[f.k],i0+f.th)}ごろから)。湖上・岸の釣りは避けてください。`})}
+ return o.sort((a,b)=>b.lv-a.lv)}
+function notice(){const el=$("#v-nt");
+ if(!ntA&&Date.now()-ntTry>6e4)loadAlerts();if(wxNeed())loadWx();
+ const LK=["大津市","草津市","守山市","野洲市","近江八幡市","東近江市","彦根市","米原市","長浜市","高島市","栗東市","湖南市"];
+ let h="",items=[];
+ if(ntA){let ar=ntA.areas.filter(a=>a.warnings.length);const lake=ar.filter(a=>LK.includes(a.name)||/^(北部|南部)$/.test(a.name));
+  const named=ntA.areas.some(a=>LK.includes(a.name));ar=named?lake:ar;
+  const key=w=>/警報/.test(w.name)?2:1;
+  const info=ar.map(a=>({n:/^(北部|南部)$/.test(a.name)?"滋賀県"+a.name:a.name,w:a.warnings})).sort((a,b)=>Math.max(0,...b.w.map(key))-Math.max(0,...a.w.map(key)));
+  const rows=info.map(a=>{const w2=a.w.filter(w=>key(w)===2),w1=a.w.filter(w=>key(w)===1);return`<div style="margin:6px 0"><b>${esc(a.n)}</b><br>${w2.map(w=>`<span style="color:#d33"><b>${esc(w.name)}</b></span>`).join("　")}${w2.length&&w1.length?"　":""}${w1.map(w=>`<span style="color:#b87a00">${esc(w.name)}</span>`).join("　")}</div>`}).join("");
+  h+=`<div class="card"><b>気象庁 警報・注意報</b><div class="note">湖岸の市町と滋賀県北部・南部の分${ntA.reportTime?"(気象庁発表 "+esc(ntA.reportTime.slice(5,16).replace("T"," "))+")":""}</div>${rows||'<p style="margin:8px 0">✅ 現在、警報・注意報は出ていません。</p>'}</div>`}
+ else h+=`<div class="card"><b>気象庁 警報・注意報</b><p class="note">${esc(ntErr||"読み込み中…")}<br>データは30分ごとの自動更新で作られます。初回の更新が終わるまで表示されないことがあります。</p></div>`;
+ items=ntForecast();
+ h+=`<div class="card"><b>天気予報から見た注意</b><div class="note">今後24時間の予報と直近24時間の雨から判定(琵琶湖周辺11地点)</div>`+(wxD?(items.length?items.map(x=>`<div style="margin:8px 0;padding:8px;border-radius:8px;border:1px solid ${x.lv>1?"#d33":"#e8a200"}"><b>${x.ic} ${esc(x.t)}</b><div class="note" style="margin-top:2px">${esc(x.d)}</div></div>`).join(""):'<p style="margin:8px 0">✅ 目立った雨・風・雷の予報はありません。</p>'):`<p class="note">${esc(wxErr||"天気を読み込み中…")}</p>`)+`<p class="note">雨は1時間と24時間の合計、風は突風の最大値で判定した目安です。実際の判断は気象庁の最新情報を確認してください。</p></div>`;
+ el.innerHTML=h}
 function nowStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`}
 function rec(){
  const rows=man.map((r,i)=>({r,i})).sort((a,b)=>b.r.time.localeCompare(a.r.time)).slice(0,30).map(({r,i})=>`<tr><td>${r.time.replace("T"," ")}</td><td>${esc(r.place)}</td><td class="n">${r.level??""}</td><td class="n">${r.flow??""}</td><td class="n">${r.temp??""}</td><td>${r.flow!=null?(r.end||"次の入力まで"):""}</td><td><button data-i="${i}">削除</button></td></tr>`).join("");
