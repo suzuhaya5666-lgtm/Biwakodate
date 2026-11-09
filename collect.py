@@ -183,7 +183,7 @@ def to_iso(s):  # "2026/11/06 21:00" -> "2026-11-06T21:00"
 A_OUT = Path("data/alerts.json")
 A_NAME = {
     "02": "暴風雪警報", "03": "大雨警報", "04": "洪水警報", "05": "暴風警報", "06": "大雪警報",
-    "07": "波浪警報", "08": "高潮警報",
+    "07": "波浪警報", "08": "高潮警報", "09": "土砂災害警報",
     "10": "大雨注意報", "12": "大雪注意報", "13": "風雪注意報", "14": "雷注意報", "15": "強風注意報",
     "16": "波浪注意報", "17": "融雪注意報", "18": "洪水注意報", "19": "高潮注意報", "20": "濃霧注意報",
     "21": "乾燥注意報", "22": "なだれ注意報", "23": "低温注意報", "24": "霜注意報", "25": "着氷注意報",
@@ -194,28 +194,53 @@ A_NAME = {
 
 
 def collect_alerts():
-    """滋賀県の警報・注意報を data/alerts.json に書き出す(毎回上書き)。"""
-    j = get_json("https://www.jma.go.jp/bosai/warning/data/warning/250000.json")
+    """滋賀県の警報・注意報を data/alerts.json に書き出す(毎回上書き)。
+    気象庁は 2026年5月28日に新形式(r8)へ切り替えた。旧URLは更新が止まっているので使わない。"""
+    j = get_json("https://www.jma.go.jp/bosai/warning/data/r8/250000.json")
+    # 形式の確認用に、気象庁の生データをそのまま保存しておく
+    Path("data/alerts_raw.json").write_text(json.dumps(j, ensure_ascii=False), encoding="utf-8")
     names = {}
     try:
         a = get_json("https://www.jma.go.jp/bosai/common/const/area.json")
-        for k in ("class10s", "class20s"):
+        for k in ("class10s", "class15s", "class20s"):
             for code, v in a.get(k, {}).items():
                 names[code] = v.get("name", code)
     except Exception as e:
         print(f"地域名の取得に失敗: {e}", file=sys.stderr)
-    out = {"updated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M"),
-           "reportTime": j.get("reportDatetime", ""), "areas": []}
-    for at in j.get("areaTypes", []):
-        for ar in at.get("areas", []):
-            ws = []
-            for w in ar.get("warnings", []):
-                code, st = str(w.get("code", "")), w.get("status", "")
-                if not code or st == "解除":
+    entries = j if isinstance(j, list) else [j]
+    acc, report = {}, ""
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        report = report or str(e.get("reportDatetime", ""))
+        w = e.get("warning")
+        if not isinstance(w, dict):
+            continue
+        for key, items in w.items():
+            if not (key.endswith("Items") and isinstance(items, list)):
+                continue
+            for it in items:
+                if not isinstance(it, dict):
                     continue
-                ws.append({"code": code, "name": A_NAME.get(code, "警報・注意報(" + code + ")"), "status": st})
-            code = str(ar.get("code", ""))
-            out["areas"].append({"code": code, "name": names.get(code, code), "warnings": ws})
+                ac = str(it.get("areaCode") or it.get("code") or "")
+                if not ac:
+                    continue
+                d = acc.setdefault(ac, {})
+                for k in it.get("kinds") or it.get("warnings") or []:
+                    code, st = str(k.get("code", "")), str(k.get("status", ""))
+                    if not code or st in ("解除", "発表警報・注意報はなし"):
+                        continue
+                    d[code] = st
+    out = {"updated": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M"),
+           "reportTime": report, "areas": []}
+    for ac, d in acc.items():
+        ws = [{"code": c, "name": A_NAME.get(c, "警報・注意報(コード" + c + ")"), "status": st}
+              for c, st in sorted(d.items())]
+        out["areas"].append({"code": ac, "name": names.get(ac, ac), "warnings": ws})
+    for ar in out["areas"]:
+        for w in ar["warnings"]:
+            if w["code"] not in A_NAME:
+                print(f"未登録のコード: {w['code']} ({ar['name']})", file=sys.stderr)
     A_OUT.write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
     topic = os.environ.get("NTFY_TOPIC", "").strip()
     if topic:
@@ -228,8 +253,10 @@ def collect_alerts():
 # ---- スマホへの通知(ntfy)。GitHub の Secrets に NTFY_TOPIC を入れると有効になる ----
 APP_URL = "https://suzuhaya5666-lgtm.github.io/Biwakodate/"
 N_STATE = Path("data/notified.json")
+N_ADV = {"10", "12", "14", "15", "18"}  # 通知する注意報: 大雨・大雪・雷・強風・洪水
 N_AREAS = ["大津市", "草津市", "守山市", "野洲市", "近江八幡市", "東近江市", "彦根市", "米原市",
-           "長浜市", "高島市", "栗東市", "湖南市"]
+           "長浜市", "高島市", "栗東市", "湖南市", "甲賀市", "日野町", "竜王町", "愛荘町",
+           "豊郷町", "甲良町", "多賀町"]
 
 
 def ntfy_send(topic, title, message, priority=3, tags=None):
@@ -252,6 +279,9 @@ def notify_alerts(out, topic, send=ntfy_send):
             continue
         label = "滋賀県" + nm if nm in ("北部", "南部") else nm
         for w in a["warnings"]:
+            # 警報・特別警報はすべて通知。注意報は 大雨・大雪・洪水・雷・強風 だけ通知する
+            if A_NAME.get(w["code"], "").endswith("注意報") and w["code"] not in N_ADV:
+                continue
             cur[label + ":" + w["name"]] = (label, w["name"])
     old = set()
     if N_STATE.exists():
