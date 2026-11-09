@@ -8,6 +8,7 @@
 """
 import csv
 import json
+import os
 import sys
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -216,7 +217,58 @@ def collect_alerts():
             code = str(ar.get("code", ""))
             out["areas"].append({"code": code, "name": names.get(code, code), "warnings": ws})
     A_OUT.write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+    topic = os.environ.get("NTFY_TOPIC", "").strip()
+    if topic:
+        if os.environ.get("NTFY_TEST") == "true":
+            ntfy_send(topic, "【琵琶湖】テスト通知", "この通知が見えれば設定は成功です。", 3, ["white_check_mark"])
+        notify_alerts(out, topic)
     print(f"警報・注意報を更新しました({sum(1 for a in out['areas'] if a['warnings'])}地域)")
+
+
+# ---- スマホへの通知(ntfy)。GitHub の Secrets に NTFY_TOPIC を入れると有効になる ----
+APP_URL = "https://suzuhaya5666-lgtm.github.io/Biwakodate/"
+N_STATE = Path("data/notified.json")
+N_AREAS = ["大津市", "草津市", "守山市", "野洲市", "近江八幡市", "東近江市", "彦根市", "米原市",
+           "長浜市", "高島市", "栗東市", "湖南市"]
+
+
+def ntfy_send(topic, title, message, priority=3, tags=None):
+    body = {"topic": topic, "title": title, "message": message, "priority": priority,
+            "tags": tags or [], "click": APP_URL}
+    req = urllib.request.Request("https://ntfy.sh", data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+                                 headers={"Content-Type": "application/json",
+                                          "User-Agent": "biwako-fishing-collector/0.1"})
+    urllib.request.urlopen(req, timeout=30).read()
+
+
+def notify_alerts(out, topic, send=ntfy_send):
+    """前回の通知から増えた警報・注意報だけを送る。解除されたものは記録から外れ、再発表時にまた通知される。"""
+    named = any(a["name"] in N_AREAS for a in out["areas"])
+    cur = {}
+    for a in out["areas"]:
+        nm = a["name"]
+        if named and not (nm in N_AREAS or nm in ("北部", "南部")):
+            continue
+        label = "滋賀県" + nm if nm in ("北部", "南部") else nm
+        for w in a["warnings"]:
+            cur[label + ":" + w["name"]] = (label, w["name"])
+    old = set()
+    if N_STATE.exists():
+        try:
+            old = set(json.loads(N_STATE.read_text(encoding="utf-8")).get("keys", []))
+        except Exception:
+            old = set()
+    new = [v for k, v in cur.items() if k not in old]
+    if new:
+        by = {}
+        for label, name in new:
+            by.setdefault(label, []).append(name)
+        msg = "\n".join(label + ": " + "、".join(ns) for label, ns in by.items())
+        strong = any("警報" in n for _, n in new)
+        send(topic, "【琵琶湖】" + ("警報" if strong else "注意報") + "が出ました", msg,
+             5 if strong else 3, ["warning"] if strong else ["cloud"])
+        print(f"通知を送りました({len(new)}件)")
+    N_STATE.write_text(json.dumps({"keys": sorted(cur.keys())}, ensure_ascii=False), encoding="utf-8")
 
 
 def main():
