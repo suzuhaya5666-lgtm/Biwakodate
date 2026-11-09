@@ -72,7 +72,7 @@ const SYN=29.530588853,$=s=>document.querySelector(s);
 const MOONS=["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"];
 const LAB={temp:"水温(℃)",flow:"放流量(m³/s)",level:"水位(m)"};
 const COL=["#1f6feb","#d1242f","#1a7f37","#9a6700","#8250df","#0a7ea4"];
-const TABS=[["now","いま"],["chart","グラフ"],["wx","天気"],["trip","釣行"],["cal","潮名カレンダー"],["rec","手入力"]];
+const TABS=[["wx","マップ"],["now","現在"],["chart","グラフ"],["cal","カレンダー"],["trip","釣行"],["rec","手入力"]];
 const pad=n=>String(n).padStart(2,"0");
 const num=v=>v===""||v==null||isNaN(Number(v))?null:Number(v);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -86,7 +86,7 @@ function loadMan(){try{return JSON.parse(localStorage.getItem("bw_man")||"[]")}c
 function saveMan(){try{localStorage.setItem("bw_man",JSON.stringify(man))}catch(e){}}
 function loadView(){const d={cm:"temp",rng:"7",cs:"",ce:"",yr:{},base:"r10"};try{return Object.assign(d,JSON.parse(localStorage.getItem("bw_view")||"{}"))}catch(e){return d}}
 function saveView(){try{localStorage.setItem("bw_view",JSON.stringify(view))}catch(e){}}
-let auto=[],hist=[],histHourly=false,histTried=false,histNote="",man=loadMan(),view=loadView(),cur=new Date(),tab="now",err="読み込み中…";
+let auto=[],hist=[],histHourly=false,histTried=false,histNote="",man=loadMan(),view=loadView(),cur=new Date(),tab="wx",err="読み込み中…";
 const all=()=>auto.concat(expandMan());
 function expandMan(){const out=[],H=36e5,nowT=Math.floor(Date.now()/H)*H,fl={};
  man.forEach(r=>{if(r.level!=null||r.temp!=null)out.push({...r,flow:null,src:"m"});if(r.flow!=null)(fl[r.place]=fl[r.place]||[]).push(r)});
@@ -237,7 +237,7 @@ function wx(){
  {const c=$("#wxcn"),f=$(".tb");if(c&&f)f.scrollTop=Math.max(0,c.offsetTop-f.clientHeight/3)}
  if(wxSel>=0){const e=$("#v-wx").querySelectorAll("g.pin")[wxSel];if(e&&e.getBoundingClientRect){const b=e.getBoundingClientRect().bottom,lim=innerHeight*.42;if(b>lim)scrollBy(0,b-lim+10)}}
 }
-function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?"on":""}" data-k="${k}">${n}</button>`).join("");
+function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?"on":""}" data-k="${k}">${n}</button>${k==="cal"?'<span style="flex-basis:100%;height:0"></span>':""}`).join("");
  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.k;show()})}
 function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,wx:wx,trip:trip,rec:rec})[tab]()}
 const DP={level:2,flow:1,temp:1};
