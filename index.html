@@ -649,7 +649,9 @@ function notice(){const el=$("#v-nt");
  const S=ntSeen(),NEW=k=>S.has(k)?"":' <span style="font-size:11px;color:#fff;background:#d33;border-radius:6px;padding:1px 5px;vertical-align:middle">NEW</span>';
  let h="";
  if(ntA){const info=ntAreas();
-  const rows=info.map(a=>{const w2=a.w.filter(w=>ntW(w)===2),w1=a.w.filter(w=>ntW(w)===1),nm=w=>esc(w.name)+NEW("a:"+a.n+":"+w.name);return`<div style="margin:6px 0"><b>${esc(a.n)}</b><br>${w2.map(w=>`<span style="color:#d33"><b>${nm(w)}</b></span>`).join("　")}${w2.length&&w1.length?"　":""}${w1.map(w=>`<span style="color:#b87a00">${nm(w)}</span>`).join("　")}</div>`}).join("");
+  const G={};info.forEach(a=>a.w.forEach(w=>{const g=G[w.name]=G[w.name]||{n:w.name,lv:ntW(w),a:[],nw:false};g.a.push(a.n);if(!S.has("a:"+a.n+":"+w.name))g.nw=true}));
+  const gs=Object.values(G).sort((x,y)=>y.lv-x.lv||y.a.length-x.a.length),col=g=>g.lv>1?"#d33":"#b87a00";
+  const rows=gs.length?`<div style="margin:6px 0;font-weight:bold;color:${gs.some(g=>g.lv>1)?"#d33":"#b87a00"}">${gs.some(g=>g.lv>1)?"🚨 警報":"⚠️ 注意報"}が出ています(${gs.length}種類)</div>`+gs.map(g=>`<details style="border-top:1px solid #0001;padding:6px 0"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><b style="color:${col(g)}">${esc(g.n)}</b>${g.nw?' <span style="font-size:11px;color:#fff;background:#d33;border-radius:6px;padding:1px 5px">NEW</span>':""}<span class="note" style="margin-left:auto">${g.a.length}地域 ▾</span></summary><div class="note" style="margin-top:6px;line-height:1.7">${g.a.map(esc).join("、")}</div></details>`).join(""):"";
   h+=`<div class="card"><b>気象庁 警報・注意報</b><div class="note">滋賀県内の各市町と北部・南部の分${ntA.reportTime?"(気象庁発表 "+esc(ntA.reportTime.slice(5,16).replace("T"," "))+")":""}</div>${rows||'<p style="margin:8px 0">✅ 現在、警報・注意報は出ていません。</p>'}</div>`}
  else h+=`<div class="card"><b>気象庁 警報・注意報</b><p class="note">${esc(ntErr||"読み込み中…")}<br>データは30分ごとの自動更新で作られます。初回の更新が終わるまで表示されないことがあります。</p></div>`;
  const items=ntForecast();
