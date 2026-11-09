@@ -34,8 +34,19 @@ STATIONS = [
 # 天気の記録(日ごとの天気コード・降水量の合計など)。出典: Open-Meteo
 W_OUT = Path("data/weather_daily.csv")
 W_HEAD = ["date", "place", "code", "precip", "wmax", "tmax", "tmin"]
-W_PLACES = [("海津大崎", 35.435, 136.045), ("安曇川町", 35.32, 136.02), ("彦根市", 35.275, 136.22), ("沖島", 35.2, 136.08),
-            ("志賀", 35.17, 135.925), ("烏丸半島", 35.045, 135.945), ("唐崎", 35.035, 135.91), ("膳所", 34.995, 135.905)]
+W_PLACES = [
+    ("塩津", 35.5023836, 136.1669634),
+    ("海津大崎", 35.4482187, 136.0915766),
+    ("姉川", 35.3876593, 136.2155335),
+    ("彦根", 35.285681, 136.2464279),
+    ("沖島", 35.2024571, 136.0636766),
+    ("安曇川", 35.3209525, 136.0780844),
+    ("志賀", 35.2008873, 135.9264253),
+    ("琵琶湖大橋", 35.1211542, 135.9355907),
+    ("烏丸半島", 35.0715445, 135.9326148),
+    ("井筒", 35.0544148, 135.8793787),
+    ("プリンスホテル前", 35.005424, 135.8914975),
+]
 W_VARS = "weather_code,precipitation_sum,wind_speed_10m_max,temperature_2m_max,temperature_2m_min"
 
 
@@ -54,7 +65,10 @@ def collect_weather():
     lon = ",".join(str(p[2]) for p in W_PLACES)
     common = f"latitude={lat}&longitude={lon}&daily={W_VARS}&timezone=Asia%2FTokyo&wind_speed_unit=ms"
     urls = []
-    if len({d for d, _ in rows}) < 30:  # 初回は過去にさかのぼる(確定値・数日おくれ)
+    days = {}
+    for d, pl in rows:
+        days.setdefault(pl, set()).add(d)
+    if min((len(days.get(pl[0], ())) for pl in W_PLACES), default=0) < 30:  # 記録の少ない地点があれば過去にさかのぼる(確定値・数日おくれ)
         a, b = today - timedelta(days=90), today - timedelta(days=3)
         urls.append(f"https://archive-api.open-meteo.com/v1/archive?{common}&start_date={a}&end_date={b}")
     urls.append(f"https://api.open-meteo.com/v1/forecast?{common}&past_days=2&forecast_days=1")  # 後のものが優先
@@ -83,6 +97,70 @@ def collect_weather():
         for k in sorted(rows):
             w.writerow(rows[k])
     print(f"天気: {len(rows)} 行(日×地点)")
+
+
+# 天気の毎時の記録(風・雨)。1年ごとに別ファイル data/weather_hourly_YYYY.csv にためる
+WH_HEAD = ["time", "place", "code", "precip", "wind", "dir", "gust"]
+WH_VARS = "weather_code,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
+
+
+def collect_weather_hourly():
+    """毎時の天気(コード・降水量・風速・風向・瞬間風速)を保存する。
+    毎回、直近3日ぶんを取り直して上書きする。初回は過去90日ぶんも取り込む。"""
+    jst = timezone(timedelta(hours=9))
+    now = datetime.now(jst)
+    today = now.date()
+    now_s = now.strftime("%Y-%m-%dT%H:00")
+    rows = {}  # 年 -> {(time, place): row}
+
+    def load(year):
+        if year not in rows:
+            rows[year] = {}
+            f = Path(f"data/weather_hourly_{year}.csv")
+            if f.exists():
+                with f.open(encoding="utf-8") as fh:
+                    for r in csv.DictReader(fh):
+                        rows[year][(r["time"], r["place"])] = r
+        return rows[year]
+
+    lat = ",".join(str(p[1]) for p in W_PLACES)
+    lon = ",".join(str(p[2]) for p in W_PLACES)
+    common = f"latitude={lat}&longitude={lon}&hourly={WH_VARS}&timezone=Asia%2FTokyo&wind_speed_unit=ms"
+    urls = []
+    cur = load(today.year)
+    days = {}
+    for t, pl in cur:
+        days.setdefault(pl, set()).add(t[:10])
+    if min((len(days.get(pl[0], ())) for pl in W_PLACES), default=0) < 30:  # 記録の少ない地点があれば過去にさかのぼる
+        a, b = today - timedelta(days=90), today - timedelta(days=3)
+        urls.append(f"https://archive-api.open-meteo.com/v1/archive?{common}&start_date={a}&end_date={b}")
+        load(a.year)
+    urls.append(f"https://api.open-meteo.com/v1/forecast?{common}&past_days=2&forecast_days=1")
+    for u in urls:
+        try:
+            data = get_json(u)
+            data = data if isinstance(data, list) else [data]
+            for (place, _, _), loc in zip(W_PLACES, data):
+                h = loc["hourly"]
+                for k, t in enumerate(h["time"]):
+                    if t > now_s or h["wind_speed_10m"][k] is None:  # 未来や欠測は入れない
+                        continue
+                    g = lambda key: "" if h[key][k] is None else h[key][k]
+                    load(int(t[:4]))[(t, place)] = {"time": t, "place": place, "code": g("weather_code"), "precip": g("precipitation"),
+                                                     "wind": g("wind_speed_10m"), "dir": g("wind_direction_10m"), "gust": g("wind_gusts_10m")}
+        except Exception as e:
+            print(f"毎時の天気の取得失敗: {e}", file=sys.stderr)
+    for year, d in rows.items():
+        if not d:
+            continue
+        f = Path(f"data/weather_hourly_{year}.csv")
+        f.parent.mkdir(parents=True, exist_ok=True)
+        with f.open("w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=WH_HEAD)
+            w.writeheader()
+            for k in sorted(d):
+                w.writerow(d[k])
+    print("毎時の天気:", {y: len(d) for y, d in rows.items()})
 
 
 def get_json(url):
@@ -140,10 +218,11 @@ def main():
             w.writeheader()
         w.writerows(rows)
     print(f"{len(rows)} 行を追記しました")
-    try:
-        collect_weather()
-    except Exception as e:
-        print(f"天気の記録に失敗: {e}", file=sys.stderr)
+    for fn in (collect_weather, collect_weather_hourly):
+        try:
+            fn()
+        except Exception as e:
+            print(f"天気の記録に失敗({fn.__name__}): {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
