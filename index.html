@@ -637,8 +637,8 @@ function ntForecast(){const o=[];if(!wxD)return o;const i0=nowIdx(),H=wxD.map(d=
  const th=R.filter(x=>x.th>=0);if(th.length){const f=th.sort((a,b)=>a.th-b.th)[0];o.push({lv:2,ic:"⚡",t:"雷の予報",d:`${names(th.map(x=>T[x.k]))}で雷雨の予報(${tm(H[f.k],i0+f.th)}ごろから)。湖上・岸の釣りは避けてください。`})}
  return o.sort((a,b)=>b.lv-a.lv)}
 const NTLK=["大津市","草津市","守山市","野洲市","近江八幡市","東近江市","彦根市","米原市","長浜市","高島市","栗東市","湖南市"],ntW=w=>/警報/.test(w.name)?2:1;
-function ntAreas(){if(!ntA)return[];let ar=ntA.areas.filter(a=>a.warnings.length);const named=ntA.areas.some(a=>NTLK.includes(a.name));
- if(named)ar=ar.filter(a=>NTLK.includes(a.name)||/^(北部|南部)$/.test(a.name));
+function ntAreas(){if(!ntA)return[];let ar=ntA.areas.filter(a=>a.warnings.length);const lk=n=>NTLK.some(x=>n.startsWith(x)),named=ntA.areas.some(a=>lk(a.name));
+ if(named)ar=ar.filter(a=>lk(a.name)||/^(北部|南部)$/.test(a.name));
  return ar.map(a=>({n:/^(北部|南部)$/.test(a.name)?"滋賀県"+a.name:a.name,w:a.warnings})).sort((a,b)=>Math.max(0,...b.w.map(ntW))-Math.max(0,...a.w.map(ntW)))}
 function ntKeys(){const o=[];ntAreas().forEach(a=>a.w.forEach(w=>o.push({k:"a:"+a.n+":"+w.name,lv:ntW(w)})));if(wxD)ntForecast().forEach(x=>o.push({k:"f:"+x.t,lv:x.lv}));return o}
 function ntSeen(){try{return new Set(JSON.parse(localStorage.getItem("bw_ntseen")||"[]"))}catch(e){return new Set()}}
