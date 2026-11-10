@@ -179,6 +179,57 @@ def station_url(kind, code):
 def to_iso(s):  # "2026/11/06 21:00" -> "2026-11-06T21:00"
     return s.replace("/", "-").replace(" ", "T")
 
+# 流入河川の水位(m)。出典: 国土交通省 川の防災情報
+# 観測所コードは「事務所コード5けた+種別3けた(004=水位)+観測所番号5けた」。基準水位は川の防災情報の値。
+R_OUT = Path("data/rivers.csv")
+R_HEAD = ["time", "place", "level"]
+R_LV = ("水防団待機水位", "氾濫注意水位", "避難判断水位", "氾濫危険水位")
+RIVERS = [  # (表示名, 観測所コード, (水防団待機, 氾濫注意, 避難判断, 氾濫危険))
+    ("野洲川 野洲", "2203900400002", (2.5, 3.5, 4.3, 4.8)),
+    ("姉川 国友橋", "0640100400056", (1.0, 1.6, 1.8, 2.1)),
+    ("安曇川 常安橋", "0640100400081", (1.0, 1.5, 1.9, 2.3)),
+]
+RIVER_ALERTS = {}  # 氾濫注意水位以上の川(通知用): キー -> (名前, 文, 強い通知か)
+
+
+def collect_rivers():
+    RIVER_ALERTS.clear()
+    seen = set()
+    if R_OUT.exists():
+        with R_OUT.open(encoding="utf-8") as f:
+            for r in csv.DictReader(f):
+                seen.add((r["time"], r["place"]))
+    rows = []
+    for label, fcd, th in RIVERS:
+        try:
+            data = get_json(station_url("stg", fcd))
+            for v in data.get("hrValues", []):
+                if v.get("stg") is None:
+                    continue
+                t = to_iso(v["obsTime"])
+                if (t, label) in seen:
+                    continue
+                rows.append({"time": t, "place": label, "level": v["stg"]})
+                seen.add((t, label))
+            cur = next((v["stg"] for v in data.get("min10Values", []) if v.get("stg") is not None), None)
+            if cur is None:
+                cur = next((v["stg"] for v in data.get("hrValues", []) if v.get("stg") is not None), None)
+            if cur is not None:
+                stage = sum(1 for x in th if cur >= x)
+                if stage >= 2:
+                    RIVER_ALERTS["r:" + label + ":" + R_LV[stage - 1]] = (
+                        label, f"{R_LV[stage - 1]}を超えています({cur:.2f}m)", stage >= 3)
+        except Exception as e:  # 1地点の失敗で全体を止めない
+            print(f"河川の取得失敗: {label}: {e}", file=sys.stderr)
+    rows.sort(key=lambda r: r["time"])
+    new_file = not R_OUT.exists()
+    with R_OUT.open("a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=R_HEAD)
+        if new_file:
+            w.writeheader()
+        w.writerows(rows)
+    print(f"河川の水位を {len(rows)} 行追記しました(基準超過 {len(RIVER_ALERTS)} 件)")
+
 # 気象庁の警報・注意報(滋賀県)。出典: 気象庁ホームページ
 A_OUT = Path("data/alerts.json")
 A_NAME = {
@@ -246,7 +297,7 @@ def collect_alerts():
     if topic:
         if os.environ.get("NTFY_TEST") == "true":
             ntfy_send(topic, "【琵琶湖】テスト通知", "この通知が見えれば設定は成功です。", 3, ["white_check_mark"])
-        notify_alerts(out, topic)
+        notify_alerts(out, topic, extra=RIVER_ALERTS)
     print(f"警報・注意報を更新しました({sum(1 for a in out['areas'] if a['warnings'])}地域)")
 
 
@@ -268,7 +319,7 @@ def ntfy_send(topic, title, message, priority=3, tags=None):
     urllib.request.urlopen(req, timeout=30).read()
 
 
-def notify_alerts(out, topic, send=ntfy_send):
+def notify_alerts(out, topic, send=ntfy_send, extra=None):
     """前回の通知から増えた警報・注意報だけを送る。解除されたものは記録から外れ、再発表時にまた通知される。"""
     lake = lambda nm: any(nm.startswith(x) for x in N_AREAS)  # 大津市南部・大津市北部も含む
     named = any(lake(a["name"]) for a in out["areas"])
@@ -283,21 +334,36 @@ def notify_alerts(out, topic, send=ntfy_send):
             if A_NAME.get(w["code"], "").endswith("注意報") and w["code"] not in N_ADV:
                 continue
             cur[label + ":" + w["name"]] = (label, w["name"])
+    strong_keys = set()
+    for k, (label, name, strong) in (extra or {}).items():
+        cur[k] = (label, name)
+        if strong:
+            strong_keys.add(k)
     old = set()
     if N_STATE.exists():
         try:
             old = set(json.loads(N_STATE.read_text(encoding="utf-8")).get("keys", []))
         except Exception:
             old = set()
-    new = [v for k, v in cur.items() if k not in old]
+    newk = [(k, v) for k, v in cur.items() if k not in old]
+    new = [v for _, v in newk]
     if new:
         by = {}
         for label, name in new:
             by.setdefault(label, []).append(name)
         msg = "\n".join(label + ": " + "、".join(ns) for label, ns in by.items())
-        strong = any("警報" in n for _, n in new)
-        send(topic, "【琵琶湖】" + ("警報" if strong else "注意報") + "が出ました", msg,
-             5 if strong else 3, ["warning"] if strong else ["cloud"])
+        has_r = any(k.startswith("r:") for k, _ in newk)
+        has_a = any(not k.startswith("r:") for k, _ in newk)
+        strong = any("警報" in v[1] for k, v in newk if not k.startswith("r:")) or \
+            any(k in strong_keys for k, _ in newk)
+        if has_r and not has_a:
+            title = "【琵琶湖】川の水位が上がっています"
+        elif has_r:
+            title = "【琵琶湖】警報・注意報と川の水位"
+        else:
+            title = "【琵琶湖】" + ("警報" if strong else "注意報") + "が出ました"
+        send(topic, title, msg, 5 if strong else 4 if has_r else 3,
+             ["warning"] if strong else ["droplet"] if has_r else ["cloud"])
         print(f"通知を送りました({len(new)}件)")
     N_STATE.write_text(json.dumps({"keys": sorted(cur.keys())}, ensure_ascii=False), encoding="utf-8")
 
@@ -341,7 +407,7 @@ def main():
             w.writeheader()
         w.writerows(rows)
     print(f"{len(rows)} 行を追記しました")
-    for fn in (collect_weather, collect_weather_hourly, collect_alerts):
+    for fn in (collect_weather, collect_weather_hourly, collect_rivers, collect_alerts):
         try:
             fn()
         except Exception as e:
