@@ -694,7 +694,7 @@ function ntSeen(){try{return new Set(JSON.parse(localStorage.getItem("bw_ntseen"
 function ntMark(){try{localStorage.setItem("bw_ntseen",JSON.stringify(ntKeys().map(x=>x.k)))}catch(e){}}
 function ntBadge(){if(tab==="nt")return"";const S=ntSeen(),u=ntKeys().filter(x=>!S.has(x.k));if(!u.length)return"";const red=u.some(x=>x.lv>1);return`<span style="display:inline-block;min-width:16px;height:16px;line-height:16px;padding:0 4px;margin-left:4px;border-radius:8px;font-size:11px;font-weight:bold;color:#fff;background:${red?"#d33":"#e8a200"}">${u.length}</span>`}
 function notice(){const el=$("#v-nt");
- if(!ntA&&Date.now()-ntTry>6e4)loadAlerts();loadRivers();if(wxNeed())loadWx();
+ if((!ntA&&Date.now()-ntTry>6e4)||Date.now()-ntTry>10*60e3)loadAlerts();if(wxNeed())loadWx();
  if((rvD===null&&Date.now()-rvTry>6e4)||Date.now()-rvTry>10*60e3)loadRivers();
  const S=ntSeen(),NEW=k=>S.has(k)?"":' <span style="font-size:11px;color:#fff;background:#d33;border-radius:6px;padding:1px 5px;vertical-align:middle">NEW</span>';
  let h="";
