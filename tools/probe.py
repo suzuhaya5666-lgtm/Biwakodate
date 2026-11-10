@@ -23,7 +23,7 @@ def show(tag, path, n=900):
 
 # 1) URLの観測所(0640100400081)の名前・基準水位
 show("MASTER", "master/obs/stg/0640100400081.json", 1500)
-st, now = get(F + "system/tmCrntTime.json")
+st, now = get("https://www.river.go.jp/kawabou/file/system/tmCrntTime.json")
 d, t = json.loads(now)["crntObsTime"].split(" ")
 show("DATA", f"tmlist/stg/{d.replace('/', '')}/{t.replace(':', '')}/0640100400081.json", 500)
 
