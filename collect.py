@@ -208,6 +208,7 @@ RIVERS = [  # (表示名, 観測所コード, (水防団待機, 氾濫注意, �
     ("草津川 西矢倉", "0640100400097", (2.3, 3.1, 3.4, 4.3)),
     ("十禅寺川 南田山", "0640100400119", ()),
 ]
+RIVER_DISP = {"芹川 芹川旭橋": "芹川(滋賀県立大寮横)", "矢倉川 高根橋": "矢倉川(彦根ココス横)", "滝川 JR上流橋": "滝川(北小松)", "草津川 西矢倉": "草津川(帰帆島裏)", "十禅寺川 南田山": "十禅寺川(帰帆島裏)"}
 RIVER_ALERTS = {}  # 氾濫注意水位以上の川(通知用): キー -> (名前, 文, 強い通知か)
 
 
@@ -237,7 +238,7 @@ def collect_rivers():
                 stage = sum(1 for x in th if cur >= x)
                 if len(th) >= 2 and stage >= 2:
                     RIVER_ALERTS["r:" + label + ":" + R_LV[stage - 1]] = (
-                        label, f"{R_LV[stage - 1]}を超えています({cur:.2f}m)", stage >= 3)
+                        RIVER_DISP.get(label, label.split(" ")[0]), f"{R_LV[stage - 1]}を超えています({cur:.2f}m)", stage >= 3)
         except Exception as e:  # 1地点の失敗で全体を止めない
             print(f"河川の取得失敗: {label}: {e}", file=sys.stderr)
     rows.sort(key=lambda r: r["time"])

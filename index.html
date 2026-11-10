@@ -273,12 +273,11 @@ function now(){
  const by=m=>{const o={};rs.filter(r=>r[m]!=null).forEach(r=>(o[r.place]=o[r.place]||[]).push(r));return o};
  const latest=q=>q.reduce((x,r)=>r.time>x.time?r:x);
  let h=`<div class="card${bad?" bad":""}"><div style="font-size:18px"><span class="note">今日</span> <b>${moon(a)} ${shio(a)}</b> <span class="note">月齢${a.toFixed(1)}</span></div>`;
- for(const m of keys){const g=by(m),ps=Object.keys(g);if(!ps.length)continue;
+ for(const m of keys){const g=by(m);let ps=Object.keys(g);if(m==="level"&&g["琵琶湖(平均)"])ps=["琵琶湖(平均)"];if(!ps.length)continue;
   h+=`<div style="margin-top:8px"><div class="lbl">${LAB[m]}</div>`+ps.map(p=>`<span class="chip">${esc(p)} ${m==="temp"&&jump(g[p])?"⚠️":""}<b>${latest(g[p])[m]}</b></span>`).join("")+`</div>`}
  if(la)h+=`<div class="note" style="margin-top:8px">データ最終更新 ${la.replace("T"," ")}(${hr<1?"1時間以内":Math.floor(hr)+"時間前"})</div>`;
  if(bad)h+=`<div class="warn">3時間以上更新がありません。取得が止まっている可能性があります。GitHub の Actions を確認してください。</div>`;
  h+=`</div>`;
- try{h+=spawnCard(rs)}catch(e){}
  for(const m of keys){
   const g=by(m),ps=Object.keys(g);if(!ps.length)continue;
   const cl=(m==="temp"||m==="level")&&view.base!=="off";
@@ -292,6 +291,7 @@ function now(){
   if(jl.length)h+=`<p class="warn">⚠️ 水温が前回の値から5℃以上変化しています: ${jl.map(([p,j])=>esc(p)+"("+j.from+"→"+j.to+")").join("、")}。センサー異常の可能性があります。</p>`}
  h+=`<p class="note">平年差は、選んだ期間の同じ時期の平均との差です(水位は鳥居川の日データから作成。全期間は1991〜2024年)。「高め/低め」は±1標準偏差を超えた場合です。雄琴沖は閉局前のデータと唐橋・大橋からの推定値です。</p>`;
  if(err)h+=`<p class="note">${esc(err)}</p>`;
+ try{h+=spawnCard(rs)}catch(e){}
  $("#v-now").innerHTML=h;
  const b=$("#bs");if(b){b.value=view.base;b.onchange=e=>{view.base=e.target.value;saveView();now()}}
 }
@@ -636,8 +636,8 @@ function ntForecast(){const o=[];if(!wxD)return o;const i0=nowIdx(),H=wxD.map(d=
  else if(g.g.m>=10)o.push({lv:1,ic:"💨",t:"風が強め(突風10m/s以上)",d:`${T[g.k]}で最大${g.g.m.toFixed(0)}m/s(${tm(H[g.k],g.g.at)}ごろ)。波が立ちやすくなります。`});
  const th=R.filter(x=>x.th>=0);if(th.length){const f=th.sort((a,b)=>a.th-b.th)[0];o.push({lv:2,ic:"⚡",t:"雷の予報",d:`${names(th.map(x=>T[x.k]))}で雷雨の予報(${tm(H[f.k],i0+f.th)}ごろから)。湖上・岸の釣りは避けてください。`})}
  return o.sort((a,b)=>b.lv-a.lv)}
-const RIV=[{n:"野洲川 野洲",g:"湖東〜野洲",t:[2.5,3.5,4.3,4.8]},{n:"姉川 国友橋",g:"湖北〜彦根",t:[1.0,1.6,1.8,2.1]},{n:"安曇川 常安橋",g:"湖西",t:[1.0,1.5,1.9,2.3]},
-{n:"愛知川 葉枝見橋",g:"湖東〜野洲",t:[2.5,3.5]},{n:"日野川 仁保橋",g:"湖東〜野洲",t:[-0.17,0.93]},{n:"犬上川 千鳥橋",g:"湖北〜彦根",t:[0.8,1.7,2.0,2.3]},{n:"芹川 芹川旭橋",g:"湖北〜彦根",t:[0.7,0.9,1.0,1.4]},{n:"宇曽川 金沢大橋",g:"湖北〜彦根",t:[1.5,2.5,2.9,3.7]},{n:"天野川 天野川橋",g:"湖北〜彦根",t:[0.8,1.2,1.4,1.6]},{n:"石田川 岸脇",g:"湖西",t:[1.8,2.1]},{n:"知内川 知内川",g:"湖西",t:[1.0,1.3]},{n:"百瀬川 百瀬川",g:"湖西",t:[]},{n:"和邇川 和邇川",g:"湖西",t:[1.2,2.0]},{n:"真野川 真野川",g:"湖西",t:[0.7,1.3]},{n:"白鳥川 JR下流橋",g:"湖東〜野洲",t:[]},{n:"矢倉川 高根橋",g:"湖北〜彦根",t:[]},{n:"大川 岩熊橋",g:"湖北〜彦根",t:[0.6,1.2]},{n:"大浦川 大浦黒山橋",g:"湖北〜彦根",t:[2.0,2.5]},{n:"滝川 JR上流橋",g:"湖西",t:[]},{n:"葉山川 上鈎池橋",g:"南湖",t:[0.53,0.95]},{n:"草津川 西矢倉",g:"南湖",t:[2.3,3.1,3.4,4.3]},{n:"十禅寺川 南田山",g:"南湖",t:[]}],RGR=["湖北〜彦根","湖東〜野洲","湖西","南湖"],RLV=["水防団待機水位","氾濫注意水位","避難判断水位","氾濫危険水位"];
+const RIV=[{n:"野洲川 野洲",d:"野洲川",g:"湖東〜野洲",t:[2.5,3.5,4.3,4.8]},{n:"姉川 国友橋",d:"姉川",g:"湖北〜彦根",t:[1.0,1.6,1.8,2.1]},{n:"安曇川 常安橋",d:"安曇川",g:"湖西",t:[1.0,1.5,1.9,2.3]},
+{n:"愛知川 葉枝見橋",d:"愛知川",g:"湖東〜野洲",t:[2.5,3.5]},{n:"日野川 仁保橋",d:"日野川",g:"湖東〜野洲",t:[-0.17,0.93]},{n:"犬上川 千鳥橋",d:"犬上川",g:"湖北〜彦根",t:[0.8,1.7,2.0,2.3]},{n:"芹川 芹川旭橋",d:"芹川(滋賀県立大寮横)",g:"湖北〜彦根",t:[0.7,0.9,1.0,1.4]},{n:"宇曽川 金沢大橋",d:"宇曽川",g:"湖北〜彦根",t:[1.5,2.5,2.9,3.7]},{n:"天野川 天野川橋",d:"天野川",g:"湖北〜彦根",t:[0.8,1.2,1.4,1.6]},{n:"石田川 岸脇",d:"石田川",g:"湖西",t:[1.8,2.1]},{n:"知内川 知内川",d:"知内川",g:"湖西",t:[1.0,1.3]},{n:"百瀬川 百瀬川",d:"百瀬川",g:"湖西",t:[]},{n:"和邇川 和邇川",d:"和邇川",g:"湖西",t:[1.2,2.0]},{n:"真野川 真野川",d:"真野川",g:"湖西",t:[0.7,1.3]},{n:"白鳥川 JR下流橋",d:"白鳥川",g:"湖東〜野洲",t:[]},{n:"矢倉川 高根橋",d:"矢倉川(彦根ココス横)",g:"湖北〜彦根",t:[]},{n:"大川 岩熊橋",d:"大川",g:"湖北〜彦根",t:[0.6,1.2]},{n:"大浦川 大浦黒山橋",d:"大浦川",g:"湖北〜彦根",t:[2.0,2.5]},{n:"滝川 JR上流橋",d:"滝川(北小松)",g:"湖西",t:[]},{n:"葉山川 上鈎池橋",d:"葉山川",g:"南湖",t:[0.53,0.95]},{n:"草津川 西矢倉",d:"草津川(帰帆島裏)",g:"南湖",t:[2.3,3.1,3.4,4.3]},{n:"十禅寺川 南田山",d:"十禅寺川(帰帆島裏)",g:"南湖",t:[]}],rvName=n=>(RIV.find(r=>r.n===n)||{}).d||n,rvOpen=new Set(),RGR=["湖北〜彦根","湖東〜野洲","湖西","南湖"],RLV=["水防団待機水位","氾濫注意水位","避難判断水位","氾濫危険水位"];
 let rvD=null,rvTry=0;
 async function loadRivers(){rvTry=Date.now();try{const r=await fetch("data/rivers.csv?t="+Date.now());if(!r.ok)throw new Error(r.status);const ls=(await r.text()).trim().split(/\r?\n/);ls.shift();const o={};ls.forEach(l=>{const c=l.split(",");if(c.length<3)return;const v=parseFloat(c[2]);if(isNaN(v))return;(o[c[1]]=o[c[1]]||[]).push({t:c[0],v})});Object.values(o).forEach(a=>a.sort((x,y)=>x.t<y.t?-1:x.t>y.t?1:0));rvD=o}catch(e){rvD=rvD||{}}if(tab==="nt")notice();else if(tab==="chart")rvChart();else renderTabs()}
 const rvMs=t=>new Date(t+":00").getTime();
@@ -649,7 +649,7 @@ const rvState=r=>{if(r.none)return"";if((r.d1!=null&&r.d1>=0.05)||(r.d3!=null&&r
 const rvRising=r=>!!rvState(r);
 function rvChart(){const el=$("#rvc");if(!el)return;
  if(rvD===null){el.innerHTML='<div class="card"><b>流入河川の水位</b><p class="note">読み込み中…</p></div>';return}
- const R=rvInfo(),rise=R.filter(rvRising).map(r=>r.n),riseT=R.filter(rvRising).map(r=>r.n+"("+rvState(r)+")"),rise_=rvv.mode==="rise",names=rise_?rise:rvv.sel.filter(n=>R.some(r=>r.n===n&&!r.none)),lim=rvv.rng==="0"?0:Date.now()-(+rvv.rng)*864e5;
+ const R=rvInfo(),rise=R.filter(rvRising).map(r=>r.n),riseT=R.filter(rvRising).map(r=>r.d+"("+rvState(r)+")"),rise_=rvv.mode==="rise",names=rise_?rise:rvv.sel.filter(n=>R.some(r=>r.n===n&&!r.none)),lim=rvv.rng==="0"?0:Date.now()-(+rvv.rng)*864e5;
  const S=names.map(n=>{const i=RIV.findIndex(r=>r.n===n);return{n,i,t:RIV[i].t,a:(rvD[n]||[]).filter(p=>rvMs(p.t)>=lim)}}).filter(s=>s.a.length);S.forEach((s,k)=>s.c=COL[k%COL.length]);
  let svg='<p class="note">'+(rise_?"いま増水中の河川はありません。":"表示する河川を選んでください。")+'</p>',tip=null;
  if(S.length){const W=640,H=240,P=44,xs=S.flatMap(s=>s.a.map(p=>rvMs(p.t))),x0=Math.min(...xs),x1=Math.max(...xs);
@@ -664,11 +664,11 @@ function rvChart(){const el=$("#rvc");if(!el)return;
     `<polyline fill="none" stroke="${c}" stroke-width="2" points="${s.a.map(p=>X(rvMs(p.t))+","+Y(p.v)).join(" ")}"/>`+(s.a.length<=3?s.a.map(p=>`<circle cx="${X(rvMs(p.t))}" cy="${Y(p.v)}" r="3" fill="${c}"/>`).join(""):"")}).join("")+`</g><g id="rvtip" pointer-events="none"></g></svg>`;
   tip=(e,sv)=>{const r=sv.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*W,vy=(e.clientY-r.top)/r.height*H;let b=null,bd=1e18;
    S.forEach(s=>s.a.forEach(p=>{const dx=X(rvMs(p.t))-vx,dy=Y(p.v)-vy,d=dx*dx+dy*dy;if(d<bd){bd=d;b=[s,p]}}));const g=sv.querySelector("#rvtip");if(!b||!g)return;
-   const[s,p]=b,px=X(rvMs(p.t)),py=Y(p.v),c=s.c,t1=fmt(rvMs(p.t)).replace(":00",":00")+"",t2=`${s.n}  ${p.v.toFixed(2)}m`,w=Math.max(t1.length*9,t2.length*10)+16,bx=px>W/2?px-w-8:px+8;
+   const[s,p]=b,px=X(rvMs(p.t)),py=Y(p.v),c=s.c,t1=fmt(rvMs(p.t)).replace(":00",":00")+"",t2=`${rvName(s.n)}  ${p.v.toFixed(2)}m`,w=Math.max(t1.length*9,t2.length*10)+16,bx=px>W/2?px-w-8:px+8;
    g.innerHTML=`<line x1="${px}" x2="${px}" y1="8" y2="${H-P}" stroke="${c}" stroke-dasharray="3 3"/><circle cx="${px}" cy="${py}" r="5" fill="${c}" stroke="#fff" stroke-width="1.5"/><rect x="${bx}" y="12" width="${w}" height="38" rx="6" fill="var(--card)" stroke="var(--ln)"/><text x="${bx+8}" y="28" font-size="12" fill="var(--sub)">${esc(t1)}</text><text x="${bx+8}" y="44" font-size="13" font-weight="bold" fill="${c}">${esc(t2)}</text>`}}
  const B=(on,attr,lab,extra)=>`<button class="pl ${on?"pri":""}" ${attr} ${extra||""}>${lab}</button>`;
  const chips=rise_?`<div class="note" style="margin:6px 0">増水中の判定: 1時間で+0.05m以上・3時間で+0.10m以上の上昇(上昇中)、または、水防団待機水位以上か、直近3日間の最低水位より+0.15m以上高い間(減水中・高水位)。いま ${riseT.length?esc(riseT.join("、")):"該当なし"}</div>`
-  :`<div class="row" style="margin:4px 0"><button class="pl" data-rall="1">全部オフ</button></div>`+RGR.map(g=>`<div class="note" style="margin:6px 0 2px">${g}</div><div class="row">${RIV.map((r,i)=>r.g!==g?"":(()=>{const k=rvv.sel.indexOf(r.n),on=k>=0,c=COL[(on?k:i)%COL.length];return`<button class="pl" data-rn="${i}" style="border-color:${c};${on?`background:${c};color:#fff`:"opacity:.45;text-decoration:line-through"}">${esc(r.n)}</button>`})()).join("")}</div>`).join("");
+  :`<div class="row" style="margin:4px 0"><button class="pl" data-rall="1">全部オフ</button><span class="note" style="align-self:center">地域をタップして川を選びます</span></div>`+RGR.map(g=>{const ms=RIV.map((r,i)=>[r,i]).filter(x=>x[0].g===g),n=ms.filter(x=>rvv.sel.includes(x[0].n)).length,op=rvOpen.has(g);return`<div style="border-top:1px solid #0001"><div class="rvgh" data-gr="${g}" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 0;touch-action:manipulation"><b>${g}</b><span class="note" style="margin-left:auto">${n?"選択 "+n+" / ":""}${ms.length}河川 ${op?"▴":"▾"}</span></div>${op?`<div class="row" style="margin-bottom:6px">${ms.map(([r,i])=>{const k=rvv.sel.indexOf(r.n),on=k>=0,c=COL[(on?k:i)%COL.length];return`<button class="pl" data-rn="${i}" style="border-color:${c};${on?`background:${c};color:#fff`:"opacity:.45;text-decoration:line-through"}">${esc(r.d)}</button>`}).join("")}</div>`:""}</div>`}).join("")+(rvv.sel.length?`<div class="note" style="margin:4px 0">表示中: ${rvv.sel.map((n,k)=>`<span style="white-space:nowrap"><span style="color:${COL[k%COL.length]}">●</span>${esc(rvName(n))}</span>`).join("　")}</div>`:"");
  el.innerHTML=`<div class="card"><b>流入河川の水位</b>
   <div class="row" style="margin-top:6px">${B(!rise_,'data-md="sel"',"河川を選ぶ")}${B(rise_,'data-md="rise"',"増水中の河川"+(rise.length?"("+rise.length+")":""))}</div>
   ${chips}
@@ -677,16 +677,17 @@ function rvChart(){const el=$("#rvc");if(!el)return;
  el.querySelector("#rvy0").onchange=e=>{rvv.y0=e.target.value;rvSave();rvChart()};el.querySelector("#rvy1").onchange=e=>{rvv.y1=e.target.value;rvSave();rvChart()};el.querySelector("#rvya").onclick=()=>{rvv.y0="";rvv.y1="";rvSave();rvChart()};
  el.querySelectorAll("button[data-md]").forEach(b=>b.onclick=()=>{rvv.mode=b.dataset.md;rvSave();rvChart()});
  el.querySelectorAll("button[data-rg]").forEach(b=>b.onclick=()=>{rvv.rng=b.dataset.rg;rvSave();rvChart()});
+ el.querySelectorAll(".rvgh").forEach(h=>h.onclick=()=>{const g=h.dataset.gr;if(rvOpen.has(g))rvOpen.delete(g);else rvOpen.add(g);rvChart()});
  el.querySelectorAll("button[data-rall]").forEach(b=>b.onclick=()=>{rvv.sel=[];rvSave();rvChart()});
  el.querySelectorAll("button[data-rn]").forEach(b=>b.onclick=()=>{const n=RIV[+b.dataset.rn].n;rvv.sel=rvv.sel.includes(n)?rvv.sel.filter(x=>x!==n):rvv.sel.concat(n);rvSave();rvChart()});
  {const sv=el.querySelector("svg");if(sv&&tip)["pointerdown","pointermove"].forEach(ev=>sv.addEventListener(ev,e=>tip(e,sv)))}
 }
 function rvCard(){if(rvD===null)return`<div class="card"><b>流入河川の水位</b><p class="note">読み込み中…</p></div>`;
  const SL=["平常","水防団待機水位を超過","氾濫注意水位を超過","避難判断水位を超過","氾濫危険水位を超過"],CL=["#2a8a5a","#b87a00","#d97a00","#d33","#d33"],sg=v=>v==null?"–":(v>=0.005?"↑+":v<=-0.005?"↓":"→")+Math.abs(v).toFixed(2)+"m";
-  const I=rvInfo(),det=r=>{if(r.none)return`<div style="margin:8px 0"><b>${esc(r.n)}</b> <span class="note">データがまだありません</span></div>`;
+  const I=rvInfo(),det=r=>{if(r.none)return`<div style="margin:8px 0"><b>${esc(r.d)}</b> <span class="note">データがまだありません</span></div>`;
   const th=r.t.length>1,nx=th&&r.st<2?`氾濫注意水位まであと${(r.t[1]-r.L.v).toFixed(2)}m`:"";
-  return`<div style="margin:10px 0;padding-top:8px;border-top:1px solid #0001"><div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><b>${esc(r.n)}</b><span style="font-size:20px;font-weight:bold">${r.L.v.toFixed(2)}m</span><span style="color:${CL[r.st]};font-weight:bold">${SL[r.st]}</span></div><div class="note">1時間 ${sg(r.d1)}・3時間 ${sg(r.d3)}・24時間の最高 ${r.mx.toFixed(2)}m<br>${rvState(r)?"【"+rvState(r)+"】3日間の最低から"+(r.up>=0?"+":"")+r.up.toFixed(2)+"m・":""}${nx?nx+"・":""}${th?"注意 "+r.t[1]+"m"+(r.t[3]!=null?" / 危険 "+r.t[3]+"m":""):"基準水位なし"}(${esc(r.L.t.slice(5,16).replace("T"," "))}時点)</div></div>`};
-  const hot=I.filter(r=>!r.none&&(r.st>=1||rvRising(r))),rest=I.filter(r=>!hot.includes(r)),line=r=>r.none?`<div class="note">${esc(r.n)}: データなし</div>`:`<div style="display:flex;gap:8px;padding:2px 0"><span>${esc(r.n)}</span><b style="margin-left:auto">${r.L.v.toFixed(2)}m</b><span class="note" style="min-width:3.2em;text-align:right">${sg(r.d3)}</span></div>`;
+  return`<div style="margin:10px 0;padding-top:8px;border-top:1px solid #0001"><div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><b>${esc(r.d)}</b><span style="font-size:20px;font-weight:bold">${r.L.v.toFixed(2)}m</span><span style="color:${CL[r.st]};font-weight:bold">${SL[r.st]}</span></div><div class="note">1時間 ${sg(r.d1)}・3時間 ${sg(r.d3)}・24時間の最高 ${r.mx.toFixed(2)}m<br>${rvState(r)?"【"+rvState(r)+"】3日間の最低から"+(r.up>=0?"+":"")+r.up.toFixed(2)+"m・":""}${nx?nx+"・":""}${th?"注意 "+r.t[1]+"m"+(r.t[3]!=null?" / 危険 "+r.t[3]+"m":""):"基準水位なし"}(${esc(r.L.t.slice(5,16).replace("T"," "))}時点)</div></div>`};
+  const hot=I.filter(r=>!r.none&&(r.st>=1||rvRising(r))),rest=I.filter(r=>!hot.includes(r)),line=r=>r.none?`<div class="note">${esc(r.d)}: データなし</div>`:`<div style="display:flex;gap:8px;padding:2px 0"><span>${esc(r.d)}</span><b style="margin-left:auto">${r.L.v.toFixed(2)}m</b><span class="note" style="min-width:3.2em;text-align:right">${sg(r.d3)}</span></div>`;
   const lst=RGR.map(g=>{const a=rest.filter(r=>r.g===g);return a.length?`<div class="note" style="margin:8px 0 2px">${g}</div>`+a.map(line).join(""):""}).join("");
   return`<div class="card"><b>流入河川の水位</b><div class="note">${RIV.length}河川の、河口に近い観測所の水位です(国土交通省 川の防災情報)。${hot.length?"増水・高水位の川を上に出しています。":"いまは平常です。"}</div>${hot.map(det).join("")}${rest.length?`<div style="border-top:1px solid #0001;margin-top:8px;padding:2px 0"><div class="ntg" data-g="rv-all" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 0;touch-action:manipulation"><b>${hot.length?"そのほかの河川":"全河川"}(${rest.length})</b><span class="note" style="margin-left:auto">水位・3時間の変化 <span class="ar">${ntOpen.has("rv-all")?"▴":"▾"}</span></span></div><div class="note ntl" ${ntOpen.has("rv-all")?"":"hidden"} style="line-height:1.6">${lst}</div></div>`:""}</div>`}
 const NTLK=["大津市","草津市","守山市","野洲市","近江八幡市","東近江市","彦根市","米原市","長浜市","高島市","栗東市","湖南市","甲賀市","日野町","竜王町","愛荘町","豊郷町","甲良町","多賀町"],ntW=w=>/警報/.test(w.name)?2:1;
