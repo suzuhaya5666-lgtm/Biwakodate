@@ -618,7 +618,7 @@ function trip(){
   a.forEach(t=>{if(t&&t.id&&ok(t.date)&&!have.has(t.id)){trips.push({id:String(t.id),date:t.date,end:ok(t.end)?t.end:"",area:t.area==="other"?"other":"bw",place:String(t.place||""),spots:Array.isArray(t.spots)?t.spots.map(String):[],catch:String(t.catch||""),memo:String(t.memo||""),photos:Array.isArray(t.photos)?t.photos.map(String):[],fish:cleanFish(t.fish),tk:cleanTk(t.tk),tm:{a:String((t.tm&&t.tm.a)||""),b:String((t.tm&&t.tm.b)||"")}});have.add(t.id);n++}});
   saveTrips();alert(n+" 件を取り込みました");trip()}catch(e){alert("読み込めませんでした。書き出した文字をそのまま貼ってください")}};
 }
-let ntA=null,ntTry=0,ntErr="";
+let ntA=null,ntTry=0,ntErr="";const ntOpen=new Set();
 async function loadAlerts(){ntTry=Date.now();try{const r=await fetch("data/alerts.json?t="+Date.now());if(!r.ok)throw new Error(r.status);ntA=await r.json();ntErr=""}catch(e){ntErr="警報・注意報のデータをまだ読み込めません"}if(tab==="nt")notice();else renderTabs()}
 function ntForecast(){const o=[];if(!wxD)return o;const i0=nowIdx(),H=wxD.map(d=>d.hourly),T=WXP.map(p=>p[0]);
  const sum=(h,a,b)=>{let t=0;for(let i=Math.max(0,a);i<b&&i<h.precipitation.length;i++)t+=h.precipitation[i]||0;return t};
@@ -642,7 +642,7 @@ async function loadRivers(){rvTry=Date.now();try{const r=await fetch("data/river
 const rvMs=t=>new Date(t+":00").getTime();
 function rvInfo(){return RIV.map(s=>{const a=(rvD&&rvD[s.n])||[];if(!a.length)return Object.assign({},s,{none:true});const L=a[a.length-1],at=h=>{const lim=rvMs(L.t)-h*36e5;let b=null;for(const p of a){if(rvMs(p.t)<=lim)b=p;else break}return b},p1=at(1),p3=at(3),st=s.t.filter(x=>L.v>=x).length,mx=Math.max(...a.filter(p=>rvMs(p.t)>=rvMs(L.t)-864e5).map(p=>p.v)),bs=Math.min(...a.filter(p=>rvMs(p.t)>=rvMs(L.t)-72*36e5).map(p=>p.v));return Object.assign({},s,{L,d1:p1?L.v-p1.v:null,d3:p3?L.v-p3.v:null,st,mx,base:bs,up:L.v-bs})})}
 let rvv=(()=>{try{return JSON.parse(localStorage.getItem("bw_rvview")||"null")}catch(e){return null}})()||{};
-rvv=Object.assign({mode:"sel",sel:RIV.map(r=>r.n),rng:"2"},rvv);if(!Array.isArray(rvv.sel))rvv.sel=RIV.map(r=>r.n);
+rvv=Object.assign({mode:"sel",sel:RIV.map(r=>r.n),rng:"2",y0:"",y1:""},rvv);if(!Array.isArray(rvv.sel))rvv.sel=RIV.map(r=>r.n);
 const rvSave=()=>{try{localStorage.setItem("bw_rvview",JSON.stringify(rvv))}catch(e){}};
 const rvState=r=>{if(r.none)return"";if((r.d1!=null&&r.d1>=0.05)||(r.d3!=null&&r.d3>=0.10))return"上昇中";if(r.st>=1||r.up>=0.15)return r.d3!=null&&r.d3<=-0.02?"減水中":"高水位";return""};
 const rvRising=r=>!!rvState(r);
@@ -654,7 +654,7 @@ function rvChart(){const el=$("#rvc");if(!el)return;
  if(S.length){const W=640,H=240,P=44,xs=S.flatMap(s=>s.a.map(p=>rvMs(p.t))),x0=Math.min(...xs),x1=Math.max(...xs);
   let ys=S.flatMap(s=>s.a.map(p=>p.v)),y0=Math.min(...ys),y1=Math.max(...ys);
   S.forEach(s=>{if(Math.max(...s.a.map(p=>p.v))>=s.t[0]-0.3)y1=Math.max(y1,s.t[1])});
-  const pd=Math.max(0.05,(y1-y0)*0.08);y0-=pd;y1+=pd;
+  const pd=Math.max(0.05,(y1-y0)*0.08);y0-=pd;y1+=pd;if(rvv.y0!==""&&!isNaN(+rvv.y0))y0=+rvv.y0;if(rvv.y1!==""&&!isNaN(+rvv.y1))y1=+rvv.y1;if(y1<=y0)y1=y0+1;
   const X=v=>P+(x1===x0?.5:(v-x0)/(x1-x0))*(W-P-10),Y=v=>H-P-(v-y0)/(y1-y0)*(H-P-12);
   svg=`<svg viewBox="0 0 ${W} ${H}"><defs><clipPath id="rvcp"><rect x="${P}" y="8" width="${W-P-10}" height="${H-P-8}"/></clipPath></defs>`+
    [0,.5,1].map(f=>{const v=y0+(y1-y0)*f;return`<line x1="${P}" x2="${W-10}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--ln)"/><text x="${P-4}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="var(--sub)">${+v.toFixed(2)}</text>`}).join("")+
@@ -672,7 +672,8 @@ function rvChart(){const el=$("#rvc");if(!el)return;
   <div class="row" style="margin-top:6px">${B(!rise_,'data-md="sel"',"河川を選ぶ")}${B(rise_,'data-md="rise"',"増水中の河川"+(rise.length?"("+rise.length+")":""))}</div>
   ${chips}
   <div class="row">${[["1","1日"],["2","2日"],["7","7日"],["0","すべて"]].map(([v,l])=>B(rvv.rng===v,`data-rg="${v}"`,l)).join("")}</div>
-  ${svg}<p class="note">点線=氾濫注意水位。線や点をなぞると値が出ます。データは30分ごとに更新されます。</p></div>`;
+  ${svg}<p class="note">点線=氾濫注意水位。線や点をなぞると値が出ます。データは30分ごとに更新されます。</p><div class="row"><label>縦軸の最小(m)<input id="rvy0" type="number" step="any" placeholder="自動" value="${esc(rvv.y0)}"></label><label>縦軸の最大(m)<input id="rvy1" type="number" step="any" placeholder="自動" value="${esc(rvv.y1)}"></label><button id="rvya">自動に戻す</button></div></div>`;
+ el.querySelector("#rvy0").onchange=e=>{rvv.y0=e.target.value;rvSave();rvChart()};el.querySelector("#rvy1").onchange=e=>{rvv.y1=e.target.value;rvSave();rvChart()};el.querySelector("#rvya").onclick=()=>{rvv.y0="";rvv.y1="";rvSave();rvChart()};
  el.querySelectorAll("button[data-md]").forEach(b=>b.onclick=()=>{rvv.mode=b.dataset.md;rvSave();rvChart()});
  el.querySelectorAll("button[data-rg]").forEach(b=>b.onclick=()=>{rvv.rng=b.dataset.rg;rvSave();rvChart()});
  el.querySelectorAll("button[data-rn]").forEach(b=>b.onclick=()=>{const n=RIV[+b.dataset.rn].n;rvv.sel=rvv.sel.includes(n)?rvv.sel.filter(x=>x!==n):rvv.sel.concat(n);rvSave();rvChart()});
@@ -700,13 +701,15 @@ function notice(){const el=$("#v-nt");
  if(ntA){const info=ntAreas();
   const G={};info.forEach(a=>a.w.forEach(w=>{const g=G[w.name]=G[w.name]||{n:w.name,lv:ntW(w),a:[],nw:false};g.a.push(a.n);if(!S.has("a:"+a.n+":"+w.name))g.nw=true}));
   const gs=Object.values(G).sort((x,y)=>y.lv-x.lv||y.a.length-x.a.length),col=g=>g.lv>1?"#d33":"#b87a00";
-  const rows=gs.length?`<div style="margin:6px 0;font-weight:bold;color:${gs.some(g=>g.lv>1)?"#d33":"#b87a00"}">${gs.some(g=>g.lv>1)?"🚨 警報":"⚠️ 注意報"}が出ています(${gs.length}種類)</div>`+gs.map(g=>`<details style="border-top:1px solid #0001;padding:6px 0"><summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><b style="color:${col(g)}">${esc(g.n)}</b>${g.nw?' <span style="font-size:11px;color:#fff;background:#d33;border-radius:6px;padding:1px 5px">NEW</span>':""}<span class="note" style="margin-left:auto">${g.a.length}地域 ▾</span></summary><div class="note" style="margin-top:6px;line-height:1.7">${g.a.map(esc).join("、")}</div></details>`).join(""):"";
+  const rows=gs.length?`<div style="margin:6px 0;font-weight:bold;color:${gs.some(g=>g.lv>1)?"#d33":"#b87a00"}">${gs.some(g=>g.lv>1)?"🚨 警報":"⚠️ 注意報"}が出ています(${gs.length}種類)</div>`+gs.map(g=>`<div style="border-top:1px solid #0001;padding:6px 0"><div class="ntg" data-g="${esc(g.n)}" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:4px 0"><b style="color:${col(g)}">${esc(g.n)}</b>${g.nw?' <span style="font-size:11px;color:#fff;background:#d33;border-radius:6px;padding:1px 5px">NEW</span>':""}<span class="note" style="margin-left:auto">${g.a.length}地域 <span class="ar">${ntOpen.has(g.n)?"▴":"▾"}</span></span></div><div class="note ntl" ${ntOpen.has(g.n)?"":"hidden"} style="margin-top:2px;line-height:1.7">${g.a.map(esc).join("、")}</div></div>`).join(""):"";
   h+=`<div class="card"><b>気象庁 警報・注意報</b><div class="note">滋賀県内の各市町と北部・南部の分${ntA.reportTime?"(気象庁発表 "+esc(ntA.reportTime.slice(5,16).replace("T"," "))+")":""}</div>${rows||'<p style="margin:8px 0">✅ 現在、警報・注意報は出ていません。</p>'}</div>`}
  else h+=`<div class="card"><b>気象庁 警報・注意報</b><p class="note">${esc(ntErr||"読み込み中…")}<br>データは30分ごとの自動更新で作られます。初回の更新が終わるまで表示されないことがあります。</p></div>`;
  h+=rvCard();
  const items=ntForecast();
  h+=`<div class="card"><b>天気予報から見た注意</b><div class="note">今後24時間の予報と直近24時間の雨から判定(琵琶湖周辺11地点)</div>`+(wxD?(items.length?items.map(x=>`<div style="margin:8px 0;padding:8px;border-radius:8px;border:1px solid ${x.lv>1?"#d33":"#e8a200"}"><b>${x.ic} ${esc(x.t)}</b>${NEW("f:"+x.t)}<div class="note" style="margin-top:2px">${esc(x.d)}</div></div>`).join(""):'<p style="margin:8px 0">✅ 目立った雨・風・雷の予報はありません。</p>'):`<p class="note">${esc(wxErr||"天気を読み込み中…")}</p>`)+`<p class="note">雨は1時間と24時間の合計、風は突風の最大値で判定した目安です。実際の判断は気象庁の最新情報を確認してください。</p></div>`;
- el.innerHTML=h;if(ntA&&wxD&&rvD!==null){ntMark();renderTabs()}}
+ el.innerHTML=h;
+ el.querySelectorAll(".ntg").forEach(hd=>hd.onclick=()=>{const n=hd.dataset.g,l=hd.nextElementSibling,op=l.hidden;l.hidden=!op;if(op)ntOpen.add(n);else ntOpen.delete(n);hd.querySelector(".ar").textContent=op?"▴":"▾"});
+ if(ntA&&wxD&&rvD!==null){ntMark();renderTabs()}}
 function nowStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`}
 function rec(){
  const rows=man.map((r,i)=>({r,i})).sort((a,b)=>b.r.time.localeCompare(a.r.time)).slice(0,30).map(({r,i})=>`<tr><td>${r.time.replace("T"," ")}</td><td>${esc(r.place)}</td><td class="n">${r.level??""}</td><td class="n">${r.flow??""}</td><td class="n">${r.temp??""}</td><td>${r.flow!=null?(r.end||"次の入力まで"):""}</td><td><button data-i="${i}">削除</button></td></tr>`).join("");
