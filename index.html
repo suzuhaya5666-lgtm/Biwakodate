@@ -737,6 +737,7 @@ function rec(){
   saveMan();alert(add+" 件を取り込みました");rec()};
 }
 show();loadCsv().then(show);loadHistDaily();loadAlerts();if(wxNeed())loadWx();
+if(/[?&]dbg=1/.test(location.search)){let lt=Date.now(),mx=0,pd=0;setInterval(()=>{const n=Date.now(),d=n-lt-100;if(d>mx)mx=d;lt=n},100);const bx=document.createElement("div");bx.style.cssText="position:fixed;left:0;right:0;top:0;z-index:99999;background:#000c;color:#0f0;font:12px monospace;padding:4px;white-space:pre-wrap";bx.textContent="dbg on";document.body.appendChild(bx);document.addEventListener("pointerdown",()=>{pd=performance.now();mx=0},true);document.addEventListener("click",e=>{const t0=performance.now(),lag=Math.round(t0-pd);requestAnimationFrame(()=>{const t1=performance.now();bx.textContent="押す→click "+lag+"ms / click→描画 "+Math.round(t1-t0)+"ms / 直近の固まり最大 "+Math.max(0,Math.round(mx))+"ms / tab="+tab})},true)}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState!=="visible")return;if(Date.now()-ntTry>10*60e3)loadAlerts();if(Date.now()-rvTry>10*60e3)loadRivers();if(Date.now()-wxAt>15*60e3&&!wxBusy)loadWx()});
 </script>
 </body>
