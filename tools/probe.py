@@ -16,7 +16,10 @@ def get(url):
 PAGE = "https://www.river.go.jp/kawabou/pc/tm?zm=15&clat=35.342&clon=136.023&fld=0&mapType=0&ofcCd=6401&itmkndCd=4&obsCd=81"
 st, html = get(PAGE)
 print("page", st, len(html))
-srcs = re.findall(r'src="([^"]+\.js[^"]*)"', html)
+for ln in html.splitlines():
+    if re.search(r"script|\.js|src=|href=.*(css|js)", ln, re.I):
+        print("HTML", ln.strip()[:240])
+srcs = re.findall(r"""src=["']([^"']+\.js[^"']*)["']""", html)
 print("scripts", srcs)
 seen = set()
 for s in srcs:
