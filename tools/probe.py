@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """川の防災情報のデータの場所を調べるための一時的な道具(収集には使わない)。"""
+import json
 import re
 import urllib.request
+
+F = "https://www.river.go.jp/kawabou/file/files/"
 
 
 def get(url):
@@ -13,22 +16,19 @@ def get(url):
         return getattr(e, "code", "ERR"), str(e)
 
 
-PAGE = "https://www.river.go.jp/kawabou/pc/tm?zm=15&clat=35.342&clon=136.023&fld=0&mapType=0&ofcCd=6401&itmkndCd=4&obsCd=81"
-st, html = get(PAGE)
-print("page", st, len(html))
-for ln in html.splitlines():
-    if re.search(r"script|\.js|src=|href=.*(css|js)", ln, re.I):
-        print("HTML", ln.strip()[:240])
-srcs = sorted(set(re.findall(r"""(?:src|href)=["']?([^"'\s>]+\.js)""", html)))
-print("candidates", srcs)
-print("scripts", srcs)
-seen = set()
-for s in srcs:
-    url = s if s.startswith("http") else "https://www.river.go.jp" + (s if s.startswith("/") else "/kawabou/pc/" + s)
-    st, js = get(url)
-    print("JS", url, st, len(js))
-    for m in sorted(set(re.findall(r'[\w\-./{}$+\' "]*(?:tmlist|/files/|\.json|file/files|master)[\w\-./{}$+\' "]*', js))):
-        m = m.strip()
-        if 6 < len(m) < 160 and m not in seen:
-            seen.add(m)
-            print("  HIT", m)
+# サイトのプログラムから、obsCd(短い番号)の扱いを調べる
+st, js = get("https://www.river.go.jp/kawabou/js/app.4d7d8c61.js")
+n = 0
+for m in re.finditer(r"obsCd", js):
+    seg = js[max(0, m.start() - 90): m.start() + 130].replace("\n", " ")
+    if "obsFcd" in seg or "tmlist" in seg or "master" in seg:
+        print("CTX", seg)
+        n += 1
+        if n >= 12:
+            break
+
+# 滋賀県の観測所の一覧を探す
+for path in ("map/pref/prefarea.json", "obslist/idx/pref/twn/25.json", "obslist/idx/rsys/pref/25.json",
+             "obslist/idx/pref/twn/2500.json"):
+    st, body = get(F + path)
+    print("LIST", path, st, body[:500].replace("\n", " "))
