@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
-"""川の防災情報の観測所を探すための一時的な道具(収集には使わない)。"""
-import json
-import urllib.request
-from concurrent.futures import ThreadPoolExecutor
-
+import json, urllib.request
 F = "https://www.river.go.jp/kawabou/file/files/"
-
-
 def get(url):
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 biwako-fishing-collector/0.1"})
     try:
@@ -14,24 +8,18 @@ def get(url):
             return r.status, r.read().decode("utf-8", "replace")
     except Exception as e:
         return getattr(e, "code", "ERR"), ""
-
-
-def one(args):
-    ofc, n = args
-    fcd = f"{ofc:05d}004{n:05d}"
-    st, body = get(F + f"master/obs/stg/{fcd}.json")
-    if st != 200:
-        return None
+st, b = get(F + "../system/tmCrntTime.json".replace("files/../", "")) if False else get("https://www.river.go.jp/kawabou/file/system/tmCrntTime.json")
+t = json.loads(b)["crntObsTime"]
+print("TIME", t)
+d, hm = t[:8], t[8:12]
+cand = [2,3,127,130,69,70,115,8,121,6,97,119,28,40,41,10,23,24,43,44,46,102,50,54,105,83,78,79]
+for n in cand:
+    fcd = f"0640100400{n:03d}".replace("0640100400", "06401004") if False else f"06401004{n:05d}"
+    s, body = get(F + f"tmlist/stg/{d}/{hm}/{fcd}.json")
+    v = None
     try:
-        o = json.loads(body)["obsInfo"]
+        j = json.loads(body)
+        v = (str(j)[:160])
     except Exception:
-        return None
-    return (fcd, o.get("obsNm"), o.get("rvrNm"), o.get("twnNm"), o.get("rsrvStg"), o.get("warnStg"),
-            o.get("spclWarnStg"), o.get("dngStg"))
-
-
-jobs = [(22039, n) for n in range(1, 200)] + [(6401, n) for n in range(1, 300)]
-with ThreadPoolExecutor(8) as ex:
-    for r in ex.map(one, jobs):
-        if r:
-            print("STN", *r)
+        pass
+    print("DATA", fcd, s, v)
