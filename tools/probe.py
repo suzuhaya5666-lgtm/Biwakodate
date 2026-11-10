@@ -27,22 +27,33 @@ st, now = get("https://www.river.go.jp/kawabou/file/system/tmCrntTime.json")
 d, t = json.loads(now)["crntObsTime"].split(" ")
 show("DATA", f"tmlist/stg/{d.replace('/', '')}/{t.replace(':', '')}/0640100400081.json", 500)
 
-# 2) 滋賀県の市町の観測所一覧
-twn = ["25201", "25202", "25203", "25204", "25206", "25207", "25208", "25209", "25210", "25211",
-       "25212", "25213", "25214", "25383", "25384", "25425", "25441", "25442", "25443"]
-for c in twn:
-    st, body = get(F + f"obslist/obs/twnlist/{c}.json")
+# データの形(キー)を確認
+st, body = get(F + f"tmlist/stg/{d.replace('/', '')}/{t.replace(':', '')}/0640100400081.json")
+j = json.loads(body)
+for k, v in j.items():
+    print("KEY", k, type(v).__name__, (len(v) if isinstance(v, (list, dict)) else v))
+for k in ("hrValues", "min10Values"):
+    v = j.get(k) or []
+    print("VAL", k, len(v), json.dumps(v[-3:], ensure_ascii=False)[:700])
+
+# 川ごと・市ごとの観測所一覧
+def lst(tag, path):
+    st, body = get(F + path)
     if st != 200:
-        print("TWN", c, st)
-        continue
+        print(tag, path, st)
+        return
     try:
-        j = json.loads(body)
+        jj = json.loads(body)
     except Exception:
-        print("TWN", c, "json?", body[:200])
-        continue
-    items = j if isinstance(j, list) else next((v for v in j.values() if isinstance(v, list)), [])
-    print("TWN", c, "keys", list(j.keys())[:6] if isinstance(j, dict) else "list", "n", len(items))
+        print(tag, path, "json?", body[:150])
+        return
+    items = jj if isinstance(jj, list) else next((v for v in jj.values() if isinstance(v, list)), [])
+    print(tag, path, "keys", list(jj.keys())[:6] if isinstance(jj, dict) else "list", "n", len(items))
     for o in items:
         if isinstance(o, dict):
-            nm = o.get("obsNm") or o.get("obsNmS")
-            print("OBS", c, o.get("obsFcd"), o.get("obsKnd") or o.get("itmkndCd"), nm, o.get("rvrNm") or o.get("rvrCd"))
+            print("OBS", o.get("obsFcd"), o.get("obsKnd") or o.get("itmkndCd"), o.get("obsNm") or o.get("obsNmS"), o.get("rvrNm"), o.get("twnNm"))
+
+
+lst("RVR", "obslist/obs/rvrlist/86061442.json")
+for c in range(2501201, 2501215):
+    lst("TWN", f"obslist/obs/twnlist/{c}.json")
