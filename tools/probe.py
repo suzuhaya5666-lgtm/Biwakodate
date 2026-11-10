@@ -19,7 +19,8 @@ print("page", st, len(html))
 for ln in html.splitlines():
     if re.search(r"script|\.js|src=|href=.*(css|js)", ln, re.I):
         print("HTML", ln.strip()[:240])
-srcs = re.findall(r"""src=["']([^"']+\.js[^"']*)["']""", html)
+srcs = sorted(set(re.findall(r"""(?:src|href)=["']?([^"'\s>]+\.js)""", html)))
+print("candidates", srcs)
 print("scripts", srcs)
 seen = set()
 for s in srcs:
