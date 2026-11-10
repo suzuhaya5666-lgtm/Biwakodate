@@ -618,7 +618,7 @@ function trip(){
   a.forEach(t=>{if(t&&t.id&&ok(t.date)&&!have.has(t.id)){trips.push({id:String(t.id),date:t.date,end:ok(t.end)?t.end:"",area:t.area==="other"?"other":"bw",place:String(t.place||""),spots:Array.isArray(t.spots)?t.spots.map(String):[],catch:String(t.catch||""),memo:String(t.memo||""),photos:Array.isArray(t.photos)?t.photos.map(String):[],fish:cleanFish(t.fish),tk:cleanTk(t.tk),tm:{a:String((t.tm&&t.tm.a)||""),b:String((t.tm&&t.tm.b)||"")}});have.add(t.id);n++}});
   saveTrips();alert(n+" 件を取り込みました");trip()}catch(e){alert("読み込めませんでした。書き出した文字をそのまま貼ってください")}};
 }
-let ntA=null,ntTry=0,ntErr="";const ntOpen=new Set();
+let ntA=null,ntTry=0,ntErr="";const ntOpen=new Set();let ntLastK="";
 async function loadAlerts(){ntTry=Date.now();try{const r=await fetch("data/alerts.json?t="+Date.now());if(!r.ok)throw new Error(r.status);ntA=await r.json();ntErr=""}catch(e){ntErr="警報・注意報のデータをまだ読み込めません"}if(tab==="nt")notice();else renderTabs()}
 function ntForecast(){const o=[];if(!wxD)return o;const i0=nowIdx(),H=wxD.map(d=>d.hourly),T=WXP.map(p=>p[0]);
  const sum=(h,a,b)=>{let t=0;for(let i=Math.max(0,a);i<b&&i<h.precipitation.length;i++)t+=h.precipitation[i]||0;return t};
@@ -701,15 +701,15 @@ function notice(){const el=$("#v-nt");
  if(ntA){const info=ntAreas();
   const G={};info.forEach(a=>a.w.forEach(w=>{const g=G[w.name]=G[w.name]||{n:w.name,lv:ntW(w),a:[],nw:false};g.a.push(a.n);if(!S.has("a:"+a.n+":"+w.name))g.nw=true}));
   const gs=Object.values(G).sort((x,y)=>y.lv-x.lv||y.a.length-x.a.length),col=g=>g.lv>1?"#d33":"#b87a00";
-  const rows=gs.length?`<div style="margin:6px 0;font-weight:bold;color:${gs.some(g=>g.lv>1)?"#d33":"#b87a00"}">${gs.some(g=>g.lv>1)?"🚨 警報":"⚠️ 注意報"}が出ています(${gs.length}種類)</div>`+gs.map(g=>`<div style="border-top:1px solid #0001;padding:6px 0"><div class="ntg" data-g="${esc(g.n)}" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:4px 0"><b style="color:${col(g)}">${esc(g.n)}</b>${g.nw?' <span style="font-size:11px;color:#fff;background:#d33;border-radius:6px;padding:1px 5px">NEW</span>':""}<span class="note" style="margin-left:auto">${g.a.length}地域 <span class="ar">${ntOpen.has(g.n)?"▴":"▾"}</span></span></div><div class="note ntl" ${ntOpen.has(g.n)?"":"hidden"} style="margin-top:2px;line-height:1.7">${g.a.map(esc).join("、")}</div></div>`).join(""):"";
+  const rows=gs.length?`<div style="margin:6px 0;font-weight:bold;color:${gs.some(g=>g.lv>1)?"#d33":"#b87a00"}">${gs.some(g=>g.lv>1)?"🚨 警報":"⚠️ 注意報"}が出ています(${gs.length}種類)</div>`+gs.map(g=>`<div style="border-top:1px solid #0001;padding:6px 0"><div class="ntg" data-g="${esc(g.n)}" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 0;touch-action:manipulation;-webkit-tap-highlight-color:transparent"><b style="color:${col(g)}">${esc(g.n)}</b>${g.nw?' <span style="font-size:11px;color:#fff;background:#d33;border-radius:6px;padding:1px 5px">NEW</span>':""}<span class="note" style="margin-left:auto">${g.a.length}地域 <span class="ar">${ntOpen.has(g.n)?"▴":"▾"}</span></span></div><div class="note ntl" ${ntOpen.has(g.n)?"":"hidden"} style="margin-top:2px;line-height:1.7">${g.a.map(esc).join("、")}</div></div>`).join(""):"";
   h+=`<div class="card"><b>気象庁 警報・注意報</b><div class="note">滋賀県内の各市町と北部・南部の分${ntA.reportTime?"(気象庁発表 "+esc(ntA.reportTime.slice(5,16).replace("T"," "))+")":""}</div>${rows||'<p style="margin:8px 0">✅ 現在、警報・注意報は出ていません。</p>'}</div>`}
  else h+=`<div class="card"><b>気象庁 警報・注意報</b><p class="note">${esc(ntErr||"読み込み中…")}<br>データは30分ごとの自動更新で作られます。初回の更新が終わるまで表示されないことがあります。</p></div>`;
  h+=rvCard();
  const items=ntForecast();
  h+=`<div class="card"><b>天気予報から見た注意</b><div class="note">今後24時間の予報と直近24時間の雨から判定(琵琶湖周辺11地点)</div>`+(wxD?(items.length?items.map(x=>`<div style="margin:8px 0;padding:8px;border-radius:8px;border:1px solid ${x.lv>1?"#d33":"#e8a200"}"><b>${x.ic} ${esc(x.t)}</b>${NEW("f:"+x.t)}<div class="note" style="margin-top:2px">${esc(x.d)}</div></div>`).join(""):'<p style="margin:8px 0">✅ 目立った雨・風・雷の予報はありません。</p>'):`<p class="note">${esc(wxErr||"天気を読み込み中…")}</p>`)+`<p class="note">雨は1時間と24時間の合計、風は突風の最大値で判定した目安です。実際の判断は気象庁の最新情報を確認してください。</p></div>`;
- el.innerHTML=h;
- el.querySelectorAll(".ntg").forEach(hd=>hd.onclick=()=>{const n=hd.dataset.g,l=hd.nextElementSibling,op=l.hidden;l.hidden=!op;if(op)ntOpen.add(n);else ntOpen.delete(n);hd.querySelector(".ar").textContent=op?"▴":"▾"});
- if(ntA&&wxD&&rvD!==null){ntMark();renderTabs()}}
+ if(el.innerHTML!==h){el.innerHTML=h;
+ el.querySelectorAll(".ntg").forEach(hd=>hd.onclick=()=>{const n=hd.dataset.g,l=hd.nextElementSibling,op=l.hidden;l.hidden=!op;if(op)ntOpen.add(n);else ntOpen.delete(n);hd.querySelector(".ar").textContent=op?"▴":"▾"})}
+ if(ntA&&wxD&&rvD!==null){const k=ntKeys().map(x=>x.k).join("|");if(k!==ntLastK){ntLastK=k;ntMark();renderTabs()}}}
 function nowStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`}
 function rec(){
  const rows=man.map((r,i)=>({r,i})).sort((a,b)=>b.r.time.localeCompare(a.r.time)).slice(0,30).map(({r,i})=>`<tr><td>${r.time.replace("T"," ")}</td><td>${esc(r.place)}</td><td class="n">${r.level??""}</td><td class="n">${r.flow??""}</td><td class="n">${r.temp??""}</td><td>${r.flow!=null?(r.end||"次の入力まで"):""}</td><td><button data-i="${i}">削除</button></td></tr>`).join("");
