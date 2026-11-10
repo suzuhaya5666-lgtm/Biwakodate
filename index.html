@@ -362,7 +362,7 @@ function chartRender(root,st,o){const P=o.P||"",Q=id=>root.querySelector("#"+P+i
     return`<polyline fill="none" stroke="${COL[i%COL.length]}" stroke-width="2" points="${q.map(r=>X(tsOf(r))+","+Y(r[cm])).join(" ")}"/>`+(q.length<=3?q.map(r=>`<circle cx="${X(tsOf(r))}" cy="${Y(r[cm])}" r="3" fill="${COL[i%COL.length]}"/>`).join(""):"")}).join("")+`</g><g id="${P}tip" pointer-events="none"></g></svg>`;
   tipFn=(e,sv)=>{const r=sv.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*W,vy=(e.clientY-r.top)/r.height*H;let b=null,bd=1e18;
    for(const s of series)for(const q of s.q){const py=Y(q[cm]);if(py<8||py>H-P)continue;const dx=X(tsOf(q))-vx,dy=py-vy,d=dx*dx+dy*dy;if(d<bd){bd=d;b=[s,q]}}
-   const g=sv.querySelector("#"+P+"tip");if(!b||!g)return;const[s,q]=b,px=X(tsOf(q)),py=Y(q[cm]),d=new Date(tsOf(q)),c=COL[s.i%COL.length],
+   const g=sv.querySelector('[id="'+P+'tip"]');if(!b||!g)return;const[s,q]=b,px=X(tsOf(q)),py=Y(q[cm]),d=new Date(tsOf(q)),c=COL[s.i%COL.length],
    t1=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`,t2=`${s.p}  ${+q[cm].toFixed(2)} ${LAB[cm].replace(/^.*\(/,"").replace(")","")}`,
    w=Math.max(t1.length*10,t2.length*10)+16,bx=px>W/2?px-w-8:px+8;
    g.innerHTML=`<line x1="${px}" x2="${px}" y1="8" y2="${H-P}" stroke="${c}" stroke-dasharray="3 3"/><circle cx="${px}" cy="${py}" r="5" fill="${c}" stroke="#fff" stroke-width="1.5"/><rect x="${bx}" y="12" width="${w}" height="38" rx="6" fill="var(--card)" stroke="var(--ln)"/><text x="${bx+8}" y="28" font-size="12" fill="var(--tx)">${t1}</text><text x="${bx+8}" y="44" font-size="12" font-weight="600" fill="${c}">${esc(t2)}</text>`};
