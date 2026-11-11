@@ -728,7 +728,9 @@ function rec(){
  <div class="card"><b>バックアップ</b><p class="note">手入力の記録を、文字として書き出し・読み込みできます。書き出した文字は、メモアプリなどに保存してください。</p>
  <div class="row"><button id="bx">書き出す</button><button id="bi">読み込む</button></div>
  <textarea id="bt" rows="6"></textarea>
- <div class="row"><button id="bc" hidden>コピー</button><button id="bo" class="pri" hidden>取り込む</button></div></div>`;
+ <div class="row"><button id="bc" hidden>コピー</button><button id="bo" class="pri" hidden>取り込む</button></div></div>
+ <div class="card"><b>公開サイト</b><p class="note">公開版の閲覧数は、アクセス解析のページで確認できます(ログインが必要です)。</p>
+ <div class="row"><a href="https://biwafishing.goatcounter.com" target="_blank" rel="noopener"><button class="pri" type="button">閲覧数を見る</button></a><a href="https://biwafishing.github.io/biwako-opendata/" target="_blank" rel="noopener"><button type="button">公開サイトを開く</button></a></div></div>`;
  $("#add").onclick=()=>{const v=id=>num($(id).value),o={time:$("#t").value,place:$("#p").value||"未設定",level:v("#l"),flow:v("#f"),temp:v("#w"),end:$("#e").value||""};
   if(!o.time||(o.level==null&&o.flow==null&&o.temp==null))return;if(o.flow==null)o.end="";man.push(o);saveMan();rec()};
  $("#v-rec").querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>{man.splice(+b.dataset.i,1);saveMan();rec()});
