@@ -164,6 +164,10 @@ def collect_weather_hourly():
     print("毎時の天気:", {y: len(d) for y, d in rows.items()})
 
 
+# 川の防災情報の品質コード: 140=欠測、160=休止などの異常値。この値のときは数字(0など)が入っていても記録しない
+BAD_CCD = (140, 160)
+
+
 def get_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": "biwako-fishing-collector/0.1"})
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -187,7 +191,7 @@ R_LV = ("水防団待機水位", "氾濫注意水位", "避難判断水位", "�
 RIVERS = [  # (表示名, 観測所コード, (水防団待機, 氾濫注意, 避難判断, 氾濫危険)) ※基準が公表されていない川は ()
     ("野洲川 野洲", "2203900400002", (2.5, 3.5, 4.3, 4.8)),
     ("姉川 国友橋", "0640100400056", (1.0, 1.6, 1.8, 2.1)),
-    ("安曇川 常安橋", "0640100400081", (1.0, 1.5, 1.9, 2.3)),
+    ("安曇川 船橋", "0640100400080", (0.9, 1.1, 1.4, 1.7)),
     ("愛知川 葉枝見橋", "0640100400041", (2.5, 3.5)),
     ("日野川 仁保橋", "0640100400010", (-0.17, 0.93)),
     ("犬上川 千鳥橋", "0640100400043", (0.8, 1.7, 2.0, 2.3)),
@@ -224,16 +228,16 @@ def collect_rivers():
         try:
             data = get_json(station_url("stg", fcd))
             for v in data.get("hrValues", []):
-                if v.get("stg") is None:
+                if v.get("stg") is None or v.get("stgCcd") in BAD_CCD:
                     continue
                 t = to_iso(v["obsTime"])
                 if (t, label) in seen:
                     continue
                 rows.append({"time": t, "place": label, "level": v["stg"]})
                 seen.add((t, label))
-            cur = next((v["stg"] for v in data.get("min10Values", []) if v.get("stg") is not None), None)
+            cur = next((v["stg"] for v in data.get("min10Values", []) if v.get("stg") is not None and v.get("stgCcd") not in BAD_CCD), None)
             if cur is None:
-                cur = next((v["stg"] for v in data.get("hrValues", []) if v.get("stg") is not None), None)
+                cur = next((v["stg"] for v in data.get("hrValues", []) if v.get("stg") is not None and v.get("stgCcd") not in BAD_CCD), None)
             if cur is not None:
                 stage = sum(1 for x in th if cur >= x)
                 if len(th) >= 2 and stage >= 2:
@@ -407,7 +411,7 @@ def main():
             data = get_json(station_url(kind, code))
             # 毎時の値(過去2日ぶん)を取り込む。取りこぼしがあっても次回に補われる。
             for v in data.get("hrValues", []):
-                if v.get(field) is None:
+                if v.get(field) is None or v.get(field + "Ccd") in BAD_CCD:
                     continue
                 t = to_iso(v["obsTime"])
                 if (t, place, col) in seen:
