@@ -91,7 +91,7 @@ function age(y,m,d){const jd=Date.UTC(y,m,d,3)/864e5+2440587.5;let k=Math.floor(
 function shio(a){const d=Math.min(30,Math.floor(a)+1),r=((d-1)%15)+1;if(r<=4)return"大潮";if(r<=7||r>=13)return"中潮";if(r<=10)return"小潮";return r===11?"長潮":"若潮"}
 const moon=a=>MOONS[Math.floor(a/SYN*8+.5)%8];
 function loadMan(){try{return JSON.parse(localStorage.getItem("bw_man")||"[]")}catch(e){return[]}}
-function saveMan(){try{localStorage.setItem("bw_man",JSON.stringify(man))}catch(e){}}
+function saveMan(){try{localStorage.setItem("bw_man",JSON.stringify(man))}catch(e){}bkAuto()}
 function loadView(){const d={cm:"temp",rng:"7",cs:"",ce:"",yr:{},base:"r10"};try{return Object.assign(d,JSON.parse(localStorage.getItem("bw_view")||"{}"))}catch(e){return d}}
 function saveView(){try{localStorage.setItem("bw_view",JSON.stringify(view))}catch(e){}}
 let auto=[],hist=[],histHourly=false,histTried=false,histNote="",man=loadMan(),view=loadView(),cur=new Date(),tab="wx",err="読み込み中…";
@@ -389,7 +389,7 @@ function chartRender(root,st,o){const P=o.P||"",Q=id=>root.querySelector("#"+P+i
 function chart(){chartRender($("#v-chart"),view,{P:"",save:saveView,rerender:chart});$("#v-chart").insertAdjacentHTML("beforeend",'<div id="rvc"></div>');rvChart();if(rvD===null&&Date.now()-rvTry>6e4)loadRivers()}
 const TRIPK="bw_trips";
 function loadTrips(){try{return JSON.parse(localStorage.getItem(TRIPK)||"[]")}catch(e){return[]}}
-function saveTrips(){try{localStorage.setItem(TRIPK,JSON.stringify(trips))}catch(e){}}
+function saveTrips(){try{localStorage.setItem(TRIPK,JSON.stringify(trips))}catch(e){}bkAuto()}
 let trips=loadTrips(),tripSel=null,tripEdit=null,tf=null,tripPl=null,tv=null,wxHr={},wxHrBusy={};
 const dstr=(s,n)=>{const d=new Date(s+"T00:00");d.setDate(d.getDate()+n);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
 const dayJ=s=>"日月火水木金土"[new Date(s+"T00:00").getDay()],md=s=>`${+s.slice(5,7)}/${+s.slice(8)}(${dayJ(s)})`;
@@ -444,6 +444,43 @@ async function gUpload(blob,name){const f=await gFolder(),b="bw"+Date.now(),meta
  return (await r.json()).id}
 async function gGet(id){const r=await gApi("https://www.googleapis.com/drive/v3/files/"+id+"?alt=media");if(!r.ok)throw new Error("写真を読み込めませんでした("+r.status+")");return r.blob()}
 async function gDel(id){const r=await gApi("https://www.googleapis.com/drive/v3/files/"+id,{method:"DELETE"});if(!r.ok&&r.status!==404)throw new Error("Drive側の削除に失敗しました")}
+function impTrips(a){let n=0;const have=new Set(trips.map(t=>t.id)),ok=x=>/^\d{4}-\d\d-\d\d$/.test(x||"");
+  a.forEach(t=>{if(t&&t.id&&ok(t.date)&&!have.has(t.id)){trips.push({id:String(t.id),date:t.date,end:ok(t.end)?t.end:"",area:t.area==="other"?"other":"bw",place:String(t.place||""),spots:Array.isArray(t.spots)?t.spots.map(String):[],catch:String(t.catch||""),memo:String(t.memo||""),photos:Array.isArray(t.photos)?t.photos.map(String):[],fish:cleanFish(t.fish),tk:cleanTk(t.tk),tm:{a:String((t.tm&&t.tm.a)||""),b:String((t.tm&&t.tm.b)||"")}});have.add(t.id);n++}});
+  return n}
+
+/* ===== 釣行バックアップ(Googleドライブ) ===== */
+const BKN="釣行バックアップ.json";
+var bkT=null,bkBusy=false;
+const bkInfo=()=>{try{return JSON.parse(localStorage.getItem("bw_bk")||"{}")}catch(e){return{}}};
+const bkSet=o=>{try{localStorage.setItem("bw_bk",JSON.stringify(Object.assign(bkInfo(),o)))}catch(e){}};
+function bkAuto(){clearTimeout(bkT);bkT=setTimeout(()=>bkRun(false),2500)}
+async function bkFind(name){const f=await gFolder(),q=encodeURIComponent("name='"+name+"' and '"+f+"' in parents and trashed=false");
+ const r=await gApi("https://www.googleapis.com/drive/v3/files?q="+q+"&orderBy="+encodeURIComponent("modifiedTime desc")+"&fields=files(id)");const j=await r.json();return j.files&&j.files[0]||null}
+async function bkPut(name,text){const ex=await bkFind(name);
+ if(ex){const r=await gApi("https://www.googleapis.com/upload/drive/v3/files/"+ex.id+"?uploadType=media",{method:"PATCH",headers:{"Content-Type":"application/json"},body:text});if(!r.ok)throw new Error("バックアップに失敗しました("+r.status+")");return}
+ const f=await gFolder(),b="bw"+Date.now(),meta=JSON.stringify({name,parents:[f]});
+ const body="--"+b+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+meta+"\r\n--"+b+"\r\nContent-Type: application/json\r\n\r\n"+text+"\r\n--"+b+"--";
+ const r=await gApi("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{method:"POST",headers:{"Content-Type":"multipart/related; boundary="+b},body});
+ if(!r.ok){if(r.status===404)localStorage.removeItem("bw_gfolder");throw new Error("バックアップに失敗しました("+r.status+")")}}
+async function bkRun(manual){if(bkBusy)return;
+ if(!trips.length&&!man.length){if(manual)alert("記録が空なので、バックアップしませんでした。(ドライブにある記録を空で上書きしないためです)");return}
+ bkBusy=true;
+ try{if(!gOK()){if(!manual){bkSet({pend:1});return}await gAuth()}
+  const text=JSON.stringify({v:1,at:new Date().toISOString(),trips,man}),day=new Date().toISOString().slice(0,10);
+  await bkPut(BKN,text);
+  if(bkInfo().day!==day){await bkPut("釣行バックアップ_"+day+".json",text);bkSet({day})}
+  bkSet({at:Date.now(),pend:0,err:""});if(manual)alert("Googleドライブにバックアップしました")}
+ catch(e){bkSet({pend:1,err:String(e.message||e)});if(manual)alert("バックアップできませんでした: "+(e.message||e))}
+ finally{bkBusy=false;if(tab==="trip"&&!tripEdit&&!tripSel)trip()}}
+async function bkRestore(){
+ try{if(!gOK())await gAuth();const ex=await bkFind(BKN);if(!ex){alert("ドライブにバックアップが見つかりませんでした");return}
+  const r=await gApi("https://www.googleapis.com/drive/v3/files/"+ex.id+"?alt=media");if(!r.ok)throw new Error(r.status);const j=await r.json();
+  const n=impTrips(Array.isArray(j.trips)?j.trips:[]);let m=0;if(Array.isArray(j.man)&&j.man.length&&!man.length){man=j.man;m=j.man.length}
+  saveTrips();if(m)saveMan();alert(n+" 件の釣行"+(m?"と、手入力 "+m+" 件":"")+"を戻しました");if(tab==="trip")trip()}
+ catch(e){alert("復元できませんでした: "+(e.message||e))}}
+function bkCard(){const i=bkInfo(),d=i.at?new Date(i.at):null,t=d?(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"";
+ return `<p class="note">${t?"最終バックアップ: "+t:"まだバックアップしていません"}${i.pend?'<br><b style="color:#c2410c">⚠ 未バックアップの変更があります。「今すぐバックアップ」を押してください(Googleのログインが必要です)</b>':""}${i.err&&i.pend?'<br><span class="lbl">'+esc(i.err)+"</span>":""}</p>
+  <div class="row"><button id="bkn" class="pri">今すぐバックアップ</button><button id="bkr">ドライブから復元</button></div>`}
 function shrink(file,max,q){return new Promise((ok,ng)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):ng(new Error("変換に失敗しました")),"image/jpeg",q)};im.onerror=()=>{URL.revokeObjectURL(u);ng(new Error("この写真は読み込めません"))};im.src=u})}
 const b2url=b=>new Promise(ok=>{const r=new FileReader();r.onload=()=>ok(r.result);r.readAsDataURL(b)});
 const idb=()=>new Promise((ok,ng)=>{const r=indexedDB.open("bwph",1);r.onupgradeneeded=()=>r.result.createObjectStore("p");r.onsuccess=()=>ok(r.result);r.onerror=()=>ng(r.error)});
@@ -604,21 +641,20 @@ function trip(){
  const L=trips.slice().sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0),ST=yearStats();
  if(L.length&&wxNeed())loadWx();if(L.length)[...new Set(L.filter(isBw).map(t=>+t.date.slice(0,4)))].forEach(loadWxHr);
  el.innerHTML=`<div class="card"><div class="row"><b style="flex:1;font-size:17px">釣行の記録</b><button class="pri" id="tn">＋ 追加</button></div>
-  <p class="note">記録はこの端末のブラウザにだけ保存されます。バックアップは下から書き出せます。</p>
+  <p class="note">記録はこの端末に保存し、Googleドライブにも自動でバックアップします(ログイン中のみ。下で状態を確認できます)。</p>
   ${ST.length?`<div class="lbl">年間の釣行日数</div>`+ST.map(x=>`<div style="margin:2px 0"><b>${x.y}年</b>　<b style="font-size:18px">${x.all}</b>日　<span class="note">釣行${x.n}回(琵琶湖 ${x.bw}日・その他 ${x.ot}日)</span></div>`).join("")+`<div style="height:6px"></div>`:""}
   ${L.length?L.map(t=>{const bw=isBw(t),g=bw?dayAgg(tripPlaces(t)[0],t.date):null;
    return`<div class="trow" data-id="${t.id}">${t.photos&&t.photos[0]&&thumbs[t.photos[0]]?`<img src="${thumbs[t.photos[0]]}" style="float:right;width:56px;height:56px;object-fit:cover;border-radius:8px;margin-left:8px">`:""}<b>${rangeLabel(t)}</b> ${t.date.slice(0,4)}　${tideOf(t.date)}<br>📍 ${spotLabel(t)}
    <div class="note">${bw?(g.code==null?"天気データなし":`${WXE(g.code)} ${WXN(g.code)}・雨${f1(g.precip)}mm・${g.dir==null?"":dirN(g.dir)+" "}最大${f1(g.wmax)}m/s`):""}${fishSum(t)?"　🐟 "+fishSum(t):""}${t.catch?"　🎣 "+esc(t.catch):""}</div></div>`}).join(""):'<p class="note">まだ記録がありません。「＋ 追加」から登録できます。</p>'}</div>
-  ${(()=>{try{return catchCard()}catch(e){return""}})()}<div class="card"><b>バックアップ</b><p class="note">釣行の記録を文字として書き出し・読み込みできます。書き出した文字は、メモアプリなどに保存してください。</p>
+  ${(()=>{try{return catchCard()}catch(e){return""}})()}<div class="card"><b>バックアップ</b>${bkCard()}<p class="note" style="margin-top:10px">文字として書き出し・読み込みもできます。書き出した文字は、メモアプリなどにも保存しておくと安心です。</p>
   <div class="row"><button id="xb">書き出す</button><button id="ib">読み込む</button></div><textarea id="xt" rows="5"></textarea><div class="row"><button id="xo" class="pri" hidden>取り込む</button></div></div>`;
  $("#tn").onclick=()=>{tf={id:"",date:nowStr().slice(0,10),end:"",area:"bw",place:"",spots:[],other:"",catch:"",memo:""};tripEdit="new";trip()};
  el.querySelectorAll(".trow").forEach(e=>e.onclick=()=>{tripSel=e.dataset.id;tv=null;trip();scrollTo(0,0)});
+ $("#bkn").onclick=()=>bkRun(true);$("#bkr").onclick=bkRestore;
  const xt=$("#xt");
  $("#xb").onclick=()=>{xt.value=JSON.stringify(trips);$("#xo").hidden=true;xt.select()};
  $("#ib").onclick=()=>{xt.value="";xt.placeholder="ここに書き出した文字を貼って、「取り込む」を押してください";$("#xo").hidden=false;xt.focus()};
- $("#xo").onclick=()=>{try{const a=JSON.parse(xt.value);if(!Array.isArray(a))throw 0;let n=0;const have=new Set(trips.map(t=>t.id)),ok=x=>/^\d{4}-\d\d-\d\d$/.test(x||"");
-  a.forEach(t=>{if(t&&t.id&&ok(t.date)&&!have.has(t.id)){trips.push({id:String(t.id),date:t.date,end:ok(t.end)?t.end:"",area:t.area==="other"?"other":"bw",place:String(t.place||""),spots:Array.isArray(t.spots)?t.spots.map(String):[],catch:String(t.catch||""),memo:String(t.memo||""),photos:Array.isArray(t.photos)?t.photos.map(String):[],fish:cleanFish(t.fish),tk:cleanTk(t.tk),tm:{a:String((t.tm&&t.tm.a)||""),b:String((t.tm&&t.tm.b)||"")}});have.add(t.id);n++}});
-  saveTrips();alert(n+" 件を取り込みました");trip()}catch(e){alert("読み込めませんでした。書き出した文字をそのまま貼ってください")}};
+ $("#xo").onclick=()=>{try{const a=JSON.parse(xt.value);if(!Array.isArray(a))throw 0;const n=impTrips(a);saveTrips();alert(n+" 件を取り込みました");trip()}catch(e){alert("読み込めませんでした。書き出した文字をそのまま貼ってください")}};
 }
 let ntA=null,ntTry=0,ntErr="";const ntOpen=new Set();let ntLastK="";
 async function loadAlerts(){ntTry=Date.now();try{const r=await fetch("data/alerts.json?t="+Date.now());if(!r.ok)throw new Error(r.status);ntA=await r.json();ntErr=""}catch(e){ntErr="警報・注意報のデータをまだ読み込めません"}if(tab==="nt")notice();else renderTabs()}
@@ -748,6 +784,8 @@ function rec(){
 show();loadCsv().then(show);loadHistDaily();loadAlerts();if(wxNeed())loadWx();
 if(/[?&]dbg=1/.test(location.search)){let lt=Date.now(),mx=0,pd=0;setInterval(()=>{const n=Date.now(),d=n-lt-100;if(d>mx)mx=d;lt=n},100);const bx=document.createElement("div");bx.style.cssText="position:fixed;left:0;right:0;top:0;z-index:99999;background:#000c;color:#0f0;font:12px monospace;padding:4px;white-space:pre-wrap";bx.textContent="dbg on";document.body.appendChild(bx);document.addEventListener("pointerdown",()=>{pd=performance.now();mx=0},true);document.addEventListener("click",e=>{const t0=performance.now(),lag=Math.round(t0-pd);requestAnimationFrame(()=>{const t1=performance.now();bx.textContent="押す→click "+lag+"ms / click→描画 "+Math.round(t1-t0)+"ms / 直近の固まり最大 "+Math.max(0,Math.round(mx))+"ms / tab="+tab})},true)}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState!=="visible")return;if(Date.now()-ntTry>10*60e3)loadAlerts();if(Date.now()-rvTry>10*60e3)loadRivers();if(Date.now()-wxAt>15*60e3&&!wxBusy)loadWx()});
+
+(()=>{const tryBk=()=>{if(bkInfo().pend&&gOK()&&(trips.length||man.length))bkRun(false)};tryBk();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")tryBk()})})();
 </script>
 </body>
 </html>
