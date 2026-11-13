@@ -10,6 +10,7 @@ import csv
 import json
 import os
 import sys
+import time
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -111,8 +112,17 @@ def collect_forecast_cache():
              "&daily=precipitation_sum,weather_code,wind_speed_10m_max,temperature_2m_max,temperature_2m_min"
              "&timezone=Asia%2FTokyo&wind_speed_unit=ms&past_days=2&forecast_days=2")
     fc_q = "&daily=weather_code&timezone=Asia%2FTokyo&forecast_days=14"
+    def tryget(u):
+        for i in range(3):  # 一時的な通信失敗に備えて数回やり直す
+            try:
+                return get_json(u)
+            except Exception as e:
+                if i == 2:
+                    raise
+                print(f"天気キャッシュの取得をやり直します({e})", file=sys.stderr)
+                time.sleep(5)
     out = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-           "now": get_json(base + now_q), "fc": get_json(base + fc_q)}
+           "now": tryget(base + now_q), "fc": tryget(base + fc_q)}
     Path("data/weather_now.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print("weather_now.json を更新しました")
 
