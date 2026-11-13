@@ -100,6 +100,23 @@ def collect_weather():
     print(f"天気: {len(rows)} 行(日×地点)")
 
 
+def collect_forecast_cache():
+    """サイトの天気表示用に、Open-Meteoの予報を data/weather_now.json に保存する。
+    サイトは各自のスマホから直接APIを呼ぶ代わりに、このファイルを読む(混雑や回数制限の影響を受けにくい)。"""
+    lat = ",".join(str(p[1]) for p in W_PLACES)
+    lon = ",".join(str(p[2]) for p in W_PLACES)
+    base = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
+    now_q = ("&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m"
+             "&hourly=weather_code,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
+             "&daily=precipitation_sum,weather_code,wind_speed_10m_max,temperature_2m_max,temperature_2m_min"
+             "&timezone=Asia%2FTokyo&wind_speed_unit=ms&past_days=2&forecast_days=2")
+    fc_q = "&daily=weather_code&timezone=Asia%2FTokyo&forecast_days=14"
+    out = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+           "now": get_json(base + now_q), "fc": get_json(base + fc_q)}
+    Path("data/weather_now.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print("weather_now.json を更新しました")
+
+
 # 天気の毎時の記録(風・雨)。1年ごとに別ファイル data/weather_hourly_YYYY.csv にためる
 WH_HEAD = ["time", "place", "code", "precip", "wind", "dir", "gust"]
 WH_VARS = "weather_code,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
@@ -431,7 +448,7 @@ def main():
             w.writeheader()
         w.writerows(rows)
     print(f"{len(rows)} 行を追記しました")
-    for fn in (collect_weather, collect_weather_hourly, collect_rivers, collect_alerts):
+    for fn in (collect_weather, collect_weather_hourly, collect_forecast_cache, collect_rivers, collect_alerts):
         try:
             fn()
         except Exception as e:
