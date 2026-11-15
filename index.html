@@ -50,6 +50,7 @@ tr.hl td{background:var(--hl);font-weight:600}
 .chip{display:inline-block;margin:2px 14px 2px 0;white-space:nowrap}
 .lbl{color:var(--sub);font-size:12px}
 textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--ln);border-radius:8px;padding:8px;margin:8px 0}
+.th{color:#d1242f;font-weight:700}.tl{color:#1f6feb;font-weight:700}
 </style>
 </head>
 <body>
@@ -161,6 +162,15 @@ async function loadWxHist2(){for(const u of WD_URLS){try{const r=await fetch(u+"
  if(!wxHist)wxHist={}}
 const wxNeed=()=>!wxD&&!wxBusy&&Date.now()-wxTry>60e3;
 const WXFU="https://api.open-meteo.com/v1/forecast?latitude="+WXP.map(p=>p[1]).join(",")+"&longitude="+WXP.map(p=>p[2]).join(",")+"&daily=weather_code&timezone=Asia%2FTokyo&forecast_days=14";
+let tnD=null,tnTry=0,tnR={};
+function loadTn(){if(tnD||Date.now()-tnTry<60e3)return;tnTry=Date.now();fetch("data/temp_normals.json").then(r=>r.ok?r.json():null).then(j=>{if(j&&j.refs){tnD=j;tnR={};if(tab==="wx")wx()}}).catch(()=>{})}
+function tnRef(i){if(tnR[i]!=null)return tnR[i];const p=WXP[i];let b=0,bd=1e9;tnD.refs.forEach((r,k)=>{const q=Math.hypot(r.lat-p[1],(r.lon-p[2])*0.82);if(q<bd){bd=q;b=k}});return tnR[i]=b}
+const tnDoy=s=>Math.round((Date.UTC(2000,+s.slice(5,7)-1,+s.slice(8,10))-Date.UTC(2000,0,1))/864e5);
+function tnHour(i,t){if(!tnD||i==null||i<0)return null;const r=tnD.refs[tnRef(i)];return r&&r.n?r.n[tnDoy(t)][+t.slice(11,13)]:null}
+function tnDay(i,day,k){if(!tnD||i==null||i<0)return null;const r=tnD.refs[tnRef(i)],a=r&&r[k];return a?a[tnDoy(day)]:null}
+const tnCls=(v,n)=>v==null||n==null?"":v-n>=1?"th":v-n<=-1?"tl":"";
+const tnFill=(v,n)=>v==null||n==null?"var(--tx)":v-n>=1?"#d1242f":v-n<=-1?"#1f6feb":"var(--tx)";
+const TNNOTE='<div class="note" style="margin:6px 0 0">気温の色: 直近15年の同じ日(時刻)の平均と比べて、<span class="th">赤</span>は+1℃以上、<span class="tl">青</span>は−1℃以下、黒は同等です。</div>';
 let wxC=null;
 async function wxCache(){if(wxC&&Date.now()-wxC.t<5*60e3)return wxC.d;try{const r=await fetch("data/weather_now.json?t="+Date.now());if(r.ok){const c=await r.json();if(c&&c.now&&c.fc&&Date.now()-Date.parse(c.at)<3*3600e3){wxC={t:Date.now(),d:c};return c}}}catch(e){}return null}
 async function loadWxF(){wxFTry=Date.now();try{const C=await wxCache();let j;if(C)j=C.fc;else{const r=await fetch(WXFU);if(!r.ok)throw new Error(r.status);j=await r.json()}const a=Array.isArray(j)?j:[j],o={};
@@ -202,13 +212,14 @@ function pinsSvg(k){const G=wxGeo();let g="";
    (c?`<g transform="translate(${l?-17:17},17)"><circle r="10" fill="var(--ac)"/><g transform="rotate(${c.wind_direction_10m+180})"><path d="M0,-7 L5,4 L0,1 L-5,4Z" fill="#fff"/></g></g>`:"")+
    `<text x="${tx}" y="-3" font-size="16" font-weight="700" text-anchor="${an}" fill="var(--tx)" stroke="var(--card)" stroke-width="4" paint-order="stroke">${nm}</text>
    <text x="${tx}" y="16" font-size="14" text-anchor="${an}" fill="var(--tx)" stroke="var(--card)" stroke-width="4" paint-order="stroke">${c?`${dirN(c.wind_direction_10m)} ${c.wind_speed_10m.toFixed(1)}m/s`:""}</text>
-   ${c&&c.t!=null?`<text x="${tx}" y="34" font-size="14" font-weight="700" text-anchor="${an}" fill="#c2410c" stroke="var(--card)" stroke-width="4" paint-order="stroke">${(+c.t).toFixed(1)}℃</text>`:""}</g>`});
+   ${c&&c.t!=null?`<text x="${tx}" y="34" font-size="14" font-weight="700" text-anchor="${an}" fill="${tnFill(+c.t,tnHour(i,hh.time[k]))}" stroke="var(--card)" stroke-width="4" paint-order="stroke">${(+c.t).toFixed(1)}℃</text>`:""}</g>`});
  return g}
 function wxLab(k){if(!wxD)return"";const t=wxD[0].hourly.time[k],td=wxD[0].current.time.slice(0,10),dd=Math.round((new Date(t.slice(0,10))-new Date(td))/864e5),n=nowIdx();
  return`${{"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"}[dd]||t.slice(5,10)} ${+t.slice(11,13)}時 ${k===n?"(いま)":k<n?"(過去)":"(予報)"}`}
 function wxPaint(){if(!wxD)return;const k=wxK;
  const a=$("#wxs"),b=$("#wxp"),l=$("#wlab"),sl=$("#wsl");if(a)a.innerHTML=shoreSvg(k);if(b)b.innerHTML=pinsSvg(k);if(l)l.textContent=wxLab(k);if(sl)sl.value=k}
 function wx(){
+ loadTn();
  if((!wxD||Date.now()-wxAt>15*60e3)&&Date.now()-wxTry>60e3)loadWx();
  if(wxD&&!wxW){try{wxW=wxWave()}catch(e){wxW=null}}
  if(wxD&&(wxK<0||wxK>=wxD[0].hourly.time.length))wxK=nowIdx();
@@ -222,17 +233,17 @@ function wx(){
   if(wxMode==="h"){let rows="",last="";
    hh.time.forEach((t,i)=>{const day=t.slice(0,10);if(day!==last){last=day;rows+=`<tr><td colspan="5" class="note"><b>${dl(day)}(${day.slice(5).replace("-","/")})</b> 降水量合計 ${pr(day)}mm</td></tr>`}
     if(hh.precipitation[i]==null)return;
-    const cn=t.slice(0,13)===nowH;rows+=`<tr class="${cn?"cn":""}"${cn?' id="wxcn"':""}><td>${+t.slice(11,13)}時</td><td>${WXE(hh.weather_code[i])}</td><td class="n">${hh.temperature_2m&&hh.temperature_2m[i]!=null?hh.temperature_2m[i].toFixed(1):"–"}</td><td class="n">${hh.precipitation[i].toFixed(1)}mm<span class="bar" style="width:${Math.min(60,hh.precipitation[i]*12)}px"></span></td><td>${arrow(hh.wind_direction_10m[i])} ${dirN(hh.wind_direction_10m[i])} <b>${hh.wind_speed_10m[i].toFixed(1)}</b><span class="note"> (瞬間${hh.wind_gusts_10m[i].toFixed(1)})</span></td></tr>`});
+    const cn=t.slice(0,13)===nowH;rows+=`<tr class="${cn?"cn":""}"${cn?' id="wxcn"':""}><td>${+t.slice(11,13)}時</td><td>${WXE(hh.weather_code[i])}</td><td class="n ${hh.temperature_2m&&hh.temperature_2m[i]!=null?tnCls(hh.temperature_2m[i],tnHour(wxSel,t)):""}">${hh.temperature_2m&&hh.temperature_2m[i]!=null?hh.temperature_2m[i].toFixed(1):"–"}</td><td class="n">${hh.precipitation[i].toFixed(1)}mm<span class="bar" style="width:${Math.min(60,hh.precipitation[i]*12)}px"></span></td><td>${arrow(hh.wind_direction_10m[i])} ${dirN(hh.wind_direction_10m[i])} <b>${hh.wind_speed_10m[i].toFixed(1)}</b><span class="note"> (瞬間${hh.wind_gusts_10m[i].toFixed(1)})</span></td></tr>`});
    body=`<table><tr><th>時刻</th><th></th><th class="n">気温℃</th><th class="n">降水量</th><th>風向・風速(m/s)</th></tr>${rows}</table>`}
   else{const m={},H=(wxHist&&wxHist[nm])||{};for(const k in H)m[k]=H[k];
    ds.time.forEach((day,i)=>{if(day<=td&&ds.weather_code[i]!=null)m[day]={code:ds.weather_code[i],precip:ds.precipitation_sum[i],wmax:ds.wind_speed_10m_max[i],tmax:ds.temperature_2m_max[i],tmin:ds.temperature_2m_min[i]}});
    const days=Object.keys(m).filter(d=>d<=td).sort().reverse().slice(0,120);
-   body=`<table><tr><th>日付</th><th>天気</th><th class="n">雨量合計</th><th class="n">最大風速</th><th class="n">気温(低〜高)</th></tr>`+days.map(d=>{const x=m[d];return`<tr class="${d===td?"cn":""}"><td>${+d.slice(5,7)}/${+d.slice(8)}(${wd(d)})</td><td>${x.code==null?"–":WXE(x.code)+" "+WXN(x.code)}</td><td class="n">${x.precip==null?"–":x.precip.toFixed(1)+"mm"}</td><td class="n">${x.wmax==null?"–":x.wmax.toFixed(1)}</td><td class="n">${x.tmin==null?"–":Math.round(x.tmin)+"〜"+Math.round(x.tmax)+"℃"}</td></tr>`}).join("")+`</table><p class="note">今日の行は途中の値です。昨日までは、毎時の自動取得で保存した日ごとの記録です。</p>`}
+   body=`<table><tr><th>日付</th><th>天気</th><th class="n">雨量合計</th><th class="n">最大風速</th><th class="n">気温(低〜高)</th></tr>`+days.map(d=>{const x=m[d];return`<tr class="${d===td?"cn":""}"><td>${+d.slice(5,7)}/${+d.slice(8)}(${wd(d)})</td><td>${x.code==null?"–":WXE(x.code)+" "+WXN(x.code)}</td><td class="n">${x.precip==null?"–":x.precip.toFixed(1)+"mm"}</td><td class="n">${x.wmax==null?"–":x.wmax.toFixed(1)}</td><td class="n">${x.tmin==null?"–":`<span class="${tnCls(x.tmin,tnDay(wxSel,d,"m"))}">${Math.round(x.tmin)}</span>〜<span class="${tnCls(x.tmax,tnDay(wxSel,d,"x"))}">${Math.round(x.tmax)}</span>℃`}</td></tr>`}).join("")+`</table><p class="note">今日の行は途中の値です。昨日までは、毎時の自動取得で保存した日ごとの記録です。</p>`}
   sh=`<div class="sheet"><div class="row"><b style="flex:1;font-size:17px">${nm}</b><button id="wxc">閉じる</button></div>
   <div style="font-size:15px">${WXE(c.weather_code)} <b>${(+c.temperature_2m).toFixed(1)}℃</b>　${arrow(c.wind_direction_10m)} ${dirN(c.wind_direction_10m)}の風 <b>${c.wind_speed_10m.toFixed(1)}</b>m/s</div>
   <div class="note" style="margin:4px 0">雨量の合計: 一昨日 <b>${pr(ds.time[0])}</b> / 昨日 <b>${pr(ds.time[1])}</b> / 今日 <b>${pr(td)}</b> / 明日 <b>${pr(ds.time[3])}</b> mm</div>
   <div class="row"><button class="${wxMode==="h"?"pri":""}" id="wmh">1時間ごと(48時間前から)</button><button class="${wxMode==="d"?"pri":""}" id="wmd">日ごとの記録</button></div>
-  <div class="tb">${body}</div></div>`}
+  <div class="tb">${body}</div>${tnD?TNNOTE:""}</div>`}
  $("#v-wx").innerHTML=`<div id="wxm" class="${sh?"op":""}"><svg viewBox="-90 -10 ${W+190} ${H+20}" style="background:var(--sml);border-radius:12px">${g}</svg>
   <div class="row" style="margin-top:8px"><button id="wnow">いま</button><button id="wm">−1時間</button><input type="range" id="wsl" min="0" max="${N-1}" value="${K}" style="flex:1;min-width:120px"><button id="wp">+1時間</button></div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b id="wlab">${wxLab(K)}</b><button id="wwv" class="${wxOn?"pri":""}">荒れの目安 ${wxOn?"表示中":"非表示"}</button></div>
