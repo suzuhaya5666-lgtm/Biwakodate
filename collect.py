@@ -108,7 +108,7 @@ def collect_forecast_cache():
     lon = ",".join(str(p[2]) for p in W_PLACES)
     base = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
     now_q = ("&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m"
-             "&hourly=weather_code,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
+             "&hourly=weather_code,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m"
              "&daily=precipitation_sum,weather_code,wind_speed_10m_max,temperature_2m_max,temperature_2m_min"
              "&timezone=Asia%2FTokyo&wind_speed_unit=ms&past_days=2&forecast_days=2")
     fc_q = "&daily=weather_code&timezone=Asia%2FTokyo&forecast_days=14"
