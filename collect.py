@@ -113,14 +113,14 @@ def collect_forecast_cache():
              "&timezone=Asia%2FTokyo&wind_speed_unit=ms&past_days=2&forecast_days=2")
     fc_q = "&daily=weather_code&timezone=Asia%2FTokyo&forecast_days=14"
     def tryget(u):
-        for i in range(3):  # 一時的な通信失敗に備えて数回やり直す
+        for i in range(5):  # 一時的な通信失敗に備えて数回やり直す
             try:
                 return get_json(u)
             except Exception as e:
-                if i == 2:
+                if i == 4:
                     raise
                 print(f"天気キャッシュの取得をやり直します({e})", file=sys.stderr)
-                time.sleep(5)
+                time.sleep(10 * (i + 1))
     out = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
            "now": tryget(base + now_q), "fc": tryget(base + fc_q)}
     Path("data/weather_now.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
