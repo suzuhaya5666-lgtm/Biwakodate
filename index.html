@@ -173,12 +173,12 @@ const tnFill=(v,n)=>v==null||n==null?"var(--tx)":v-n>=1?"#d1242f":v-n<=-1?"#1f6f
 const TNNOTE='<div class="note" style="margin:6px 0 0">気温の色: 直近15年の同じ日(時刻)の平均と比べて、<span class="th">赤</span>は+1℃以上、<span class="tl">青</span>は−1℃以下、黒は同等です。</div>';
 let wxC=null;
 let wxStale=null;async function wxCache(){if(wxC&&Date.now()-wxC.t<5*60e3)return wxC.d;try{const r=await fetch("data/weather_now.json?t="+Date.now());if(r.ok){const c=await r.json();if(c&&c.now&&c.fc){const a=Date.now()-Date.parse(c.at);if(a<90*60e3){wxC={t:Date.now(),d:c};return c}if(a<12*3600e3)wxStale=c}}}catch(e){}return null}
-async function loadWxF(){wxFTry=Date.now();try{const C=await wxCache();let j;if(C)j=C.fc;else{try{const r=await fetch(WXFU);if(!r.ok)throw new Error(r.status);j=await r.json()}catch(e){if(wxStale)j=wxStale.fc;else throw e}}const a=Array.isArray(j)?j:[j],o={};
+async function loadWxF(){wxFTry=Date.now();try{const C=await wxCache();let j;if(C)j=C.fc;else{try{const r=await fetch(WXFU,{signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error(r.status);j=await r.json()}catch(e){if(wxStale)j=wxStale.fc;else throw e}}const a=Array.isArray(j)?j:[j],o={};
   WXP.forEach((p,i)=>{const d=a[i]&&a[i].daily;if(!d)return;o[p[0]]={};d.time.forEach((t,k)=>{if(d.weather_code[k]!=null)o[p[0]][t]=d.weather_code[k]})});wxF=o;if(tab==="cal")cal()}catch(e){}}
 function dayCode(p,d){const i=WXP.findIndex(x=>x[0]===p),D=wxD&&i>=0?wxD[i]:null;if(D){const k=D.daily.time.indexOf(d);if(k>=0&&D.daily.weather_code[k]!=null)return D.daily.weather_code[k]}
  if(wxF&&wxF[p]&&wxF[p][d]!=null&&d>=nowStr().slice(0,10))return wxF[p][d];const h=wxHist&&wxHist[p]&&wxHist[p][d];return h&&h.code!=null?h.code:null}
 async function loadWx(){if(wxBusy)return;wxBusy=true;wxTry=Date.now();loadWxHist2().then(()=>{if(tab==="wx"&&wxSel>=0)wx();else if(tab==="trip")trip();else if(tab==="nt")notice();else if(tab==="cal")cal()});
- try{const C=await wxCache();let j;if(C)j=C.now;else{try{const r=await fetch(WXU);if(!r.ok)throw new Error(r.status);j=await r.json()}catch(e){if(wxStale)j=wxStale.now;else throw e}}wxD=Array.isArray(j)?j:[j];wxW=null;wxAt=Date.now();wxErr=""}
+ try{const C=await wxCache();let j;if(C)j=C.now;else{try{const r=await fetch(WXU,{signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error(r.status);j=await r.json()}catch(e){if(wxStale)j=wxStale.now;else throw e}}wxD=Array.isArray(j)?j:[j];wxW=null;wxAt=Date.now();wxErr=""}
  catch(e){wxErr="天気を読み込めませんでした("+e.message+")"}
  wxBusy=false;if(tab==="wx")wx();else if(tab==="nt")notice();else if(tab==="trip")trip();else if(tab==="cal")cal();renderTabs()}
 const TAU=4/Math.LN10;

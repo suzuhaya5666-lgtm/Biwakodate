@@ -8,6 +8,7 @@
 """
 import csv
 import json
+import subprocess
 import os
 import sys
 import time
@@ -115,7 +116,11 @@ def collect_forecast_cache():
     def tryget(u):
         for i in range(5):  # 一時的な通信失敗に備えて数回やり直す
             try:
-                return get_json(u)
+                try:
+                    return get_json(u)
+                except Exception:  # Python経由で失敗するときがあるので、curlでも試す
+                    r = subprocess.run(["curl", "-sS", "-m", "30", "-A", "biwako-fishing-collector/0.1", u], capture_output=True, text=True, timeout=40)
+                    return json.loads(r.stdout)
             except Exception as e:
                 if i == 4:
                     raise
