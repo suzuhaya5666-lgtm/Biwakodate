@@ -228,13 +228,13 @@ function shoreSvg(k){if(!wxW||!wxOn)return"";const S=wxGeo().S,n=S.length;let o=
  return o}
 function pinsSvg(k){const G=wxGeo();let g="";
  WXP.forEach(([nm,la,lo,sd,x,y],i)=>{const D=wxD&&wxD[i],hh=D&&D.hourly,c=hh&&hh.wind_speed_10m[k]!=null?{weather_code:hh.weather_code[k],wind_speed_10m:hh.wind_speed_10m[k],wind_direction_10m:hh.wind_direction_10m[k],t:hh.temperature_2m?hh.temperature_2m[k]:null}:null,l=sd==="l";
-  const tx=l?-30:30,an=l?"end":"start";
-  g+=`<g class="pin" data-i="${i}" transform="translate(${x},${y})"><circle r="21" fill="var(--card)" stroke="${i===wxSel?"#d1242f":"var(--ac)"}" stroke-width="${i===wxSel?4:2}"/>
-   <text y="8" font-size="24" text-anchor="middle">${c?WXE(c.weather_code):"…"}</text>`+
-   (c?`<g transform="translate(${l?-17:17},17)"><circle r="10" fill="var(--ac)"/><g transform="rotate(${c.wind_direction_10m+180})"><path d="M0,-7 L5,4 L0,1 L-5,4Z" fill="#fff"/></g></g>`:"")+
-   `<text x="${tx}" y="-3" font-size="16" font-weight="700" text-anchor="${an}" fill="var(--tx)" stroke="var(--card)" stroke-width="4" paint-order="stroke">${nm}</text>
-   <text x="${tx}" y="16" font-size="14" text-anchor="${an}" fill="var(--tx)" stroke="var(--card)" stroke-width="4" paint-order="stroke">${c?`${dirN(c.wind_direction_10m)} ${c.wind_speed_10m.toFixed(1)}m/s`:""}</text>
-   ${c&&c.t!=null?`<text x="${tx}" y="34" font-size="14" font-weight="700" text-anchor="${an}" fill="${tnFill(+c.t,tnHour(i,hh.time[k]))}" stroke="var(--card)" stroke-width="4" paint-order="stroke">${(+c.t).toFixed(1)}℃</text>`:""}</g>`});
+  const tx=l?-37:37,an=l?"end":"start";
+  g+=`<g class="pin" data-i="${i}" transform="translate(${x},${y})"><circle r="26" fill="var(--card)" stroke="${i===wxSel?"#d1242f":"var(--ac)"}" stroke-width="${i===wxSel?4:2}"/>
+   <text y="10" font-size="30" text-anchor="middle">${c?WXE(c.weather_code):"…"}</text>`+
+   (c?`<g transform="translate(${l?-21:21},21)"><circle r="12" fill="var(--ac)"/><g transform="rotate(${c.wind_direction_10m+180}) scale(1.2)"><path d="M0,-7 L5,4 L0,1 L-5,4Z" fill="#fff"/></g></g>`:"")+
+   `<text x="${tx}" y="-4" font-size="20" font-weight="700" text-anchor="${an}" fill="var(--tx)" stroke="var(--card)" stroke-width="4" paint-order="stroke">${nm}</text>
+   <text x="${tx}" y="19" font-size="17" text-anchor="${an}" fill="var(--tx)" stroke="var(--card)" stroke-width="4" paint-order="stroke">${c?`${dirN(c.wind_direction_10m)} ${c.wind_speed_10m.toFixed(1)}m/s`:""}</text>
+   ${c&&c.t!=null?`<text x="${tx}" y="41" font-size="17" font-weight="700" text-anchor="${an}" fill="${tnFill(+c.t,tnHour(i,hh.time[k]))}" stroke="var(--card)" stroke-width="4" paint-order="stroke">${(+c.t).toFixed(1)}℃</text>`:""}</g>`});
  return g}
 function wxLab(k){if(!wxD)return"";const t=wxD[0].hourly.time[k],td=wxD[0].current.time.slice(0,10),dd=Math.round((new Date(t.slice(0,10))-new Date(td))/864e5),n=nowIdx();
  return`${{"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"}[dd]||t.slice(5,10)} ${+t.slice(11,13)}時 ${k===n?"(いま)":k<n?"(過去)":"(予報)"}`}
