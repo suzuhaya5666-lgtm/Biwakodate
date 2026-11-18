@@ -63,6 +63,7 @@ textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1
 <section id="v-wx" hidden></section>
 <section id="v-trip" hidden></section>
 <section id="v-nt" hidden></section>
+<section id="v-kk" hidden></section>
 <section id="v-rec" hidden></section>
 <p class="note">出典: 国土交通省 川の防災情報・水文水質データベース(水位・水温)。潮名は月齢からの計算値です。</p>
 </main>
@@ -81,7 +82,7 @@ const SYN=29.530588853,$=s=>document.querySelector(s);
 const MOONS=["🌑","🌒","🌓","🌔","🌕","🌖","🌗","🌘"];
 const LAB={temp:"水温(℃)",flow:"放流量(m³/s)",level:"水位(m)"};
 const COL=["#1f6feb","#d1242f","#1a7f37","#9a6700","#8250df","#0a7ea4"];
-const TABS=[["wx","マップ"],["now","現在"],["chart","グラフ"],["cal","カレンダー"],["trip","釣行"],["nt","お知らせ"],["rec","手入力"]];
+const TABS=[["wx","マップ"],["now","現在"],["chart","グラフ"],["cal","カレンダー"],["trip","釣行"],["kk","家計"],["nt","お知らせ"],["rec","手入力"]];
 const pad=n=>String(n).padStart(2,"0");
 const num=v=>v===""||v==null||isNaN(Number(v))?null:Number(v);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -284,7 +285,7 @@ function wx(){
 }
 function renderTabs(){$("#tabs").innerHTML=TABS.map(([k,n])=>`<button class="${k===tab?"on":""}" data-k="${k}">${n}${k==="nt"?ntBadge():""}</button>${k==="cal"?'<span style="flex-basis:100%;height:0"></span>':""}`).join("");
  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.k;show()})}
-function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,wx:wx,trip:trip,nt:notice,rec:rec})[tab]()}
+function show(){renderTabs();TABS.forEach(([k])=>$("#v-"+k).hidden=k!==tab);({now:now,cal:cal,chart:chart,wx:wx,trip:trip,kk:kk,nt:notice,rec:rec})[tab]()}
 const DP={level:2,flow:1,temp:1};
 function nearest(rs,t,tol){let b=null,bd=1e18;for(const r of rs){const d=Math.abs(new Date(r.time).getTime()-t);if(d<bd){bd=d;b=r}}return b&&bd<=tol?b:null}
 const dif=(a,b,m)=>a&&b?a[m]-b[m]:null;
@@ -501,10 +502,10 @@ async function bkPut(name,text){const ex=await bkFind(name);
  const r=await gApi("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{method:"POST",headers:{"Content-Type":"multipart/related; boundary="+b},body});
  if(!r.ok){if(r.status===404)localStorage.removeItem("bw_gfolder");throw new Error("バックアップに失敗しました("+r.status+")")}}
 async function bkRun(manual){if(bkBusy)return;
- if(!trips.length&&!man.length){if(manual)alert("記録が空なので、バックアップしませんでした。(ドライブにある記録を空で上書きしないためです)");return}
+ if(!trips.length&&!man.length&&!kake.length){if(manual)alert("記録が空なので、バックアップしませんでした。(ドライブにある記録を空で上書きしないためです)");return}
  bkBusy=true;
  try{if(!gOK()){if(!manual){bkSet({pend:1});return}await gAuth()}
-  const text=JSON.stringify({v:1,at:new Date().toISOString(),trips,man}),day=new Date().toISOString().slice(0,10);
+  const text=JSON.stringify({v:1,at:new Date().toISOString(),trips,man,kake}),day=new Date().toISOString().slice(0,10);
   await bkPut(BKN,text);
   if(bkInfo().day!==day){await bkPut("釣行バックアップ_"+day+".json",text);bkSet({day})}
   bkSet({at:Date.now(),pend:0,err:""});if(manual)alert("Googleドライブにバックアップしました")}
@@ -514,7 +515,7 @@ async function bkRestore(){
  try{if(!gOK())await gAuth();const ex=await bkFind(BKN);if(!ex){alert("ドライブにバックアップが見つかりませんでした");return}
   const r=await gApi("https://www.googleapis.com/drive/v3/files/"+ex.id+"?alt=media");if(!r.ok)throw new Error(r.status);const j=await r.json();
   const n=impTrips(Array.isArray(j.trips)?j.trips:[]);let m=0;if(Array.isArray(j.man)&&j.man.length&&!man.length){man=j.man;m=j.man.length}
-  saveTrips();if(m)saveMan();alert(n+" 件の釣行"+(m?"と、手入力 "+m+" 件":"")+"を戻しました");if(tab==="trip")trip()}
+  const k=impKake(Array.isArray(j.kake)?j.kake:[]);saveTrips();if(m)saveMan();if(k)saveKake();alert(n+" 件の釣行"+(m?"、手入力 "+m+" 件":"")+(k?"、家計 "+k+" 件":"")+"を戻しました");if(tab==="trip")trip();else if(tab==="kk")kk()}
  catch(e){alert("復元できませんでした: "+(e.message||e))}}
 function bkCard(){const i=bkInfo(),d=i.at?new Date(i.at):null,t=d?(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"";
  return `<p class="note">${t?"最終バックアップ: "+t:"まだバックアップしていません"}${i.pend?'<br><b style="color:#c2410c">⚠ 未バックアップの変更があります。「今すぐバックアップ」を押してください(Googleのログインが必要です)</b>':""}${i.err&&i.pend?'<br><span class="lbl">'+esc(i.err)+"</span>":""}</p>
@@ -792,6 +793,52 @@ function notice(){const el=$("#v-nt");
  el.querySelectorAll(".ntg").forEach(hd=>hd.onclick=()=>{const n=hd.dataset.g,l=hd.nextElementSibling,op=l.hidden;l.hidden=!op;if(op)ntOpen.add(n);else ntOpen.delete(n);hd.querySelector(".ar").textContent=op?"▴":"▾"})}
  if(ntA&&wxD&&rvD!==null){const k=ntKeys().map(x=>x.k).join("|");if(k!==ntLastK){ntLastK=k;ntMark();renderTabs()}}}
 function nowStr(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`}
+/* ===== 家計簿 ===== */
+const KKC=["ガソリン","食費","外食","釣り具","高速・駐車場","日用品","その他"];
+function loadKake(){try{return JSON.parse(localStorage.getItem("bw_kake")||"[]")}catch(e){return[]}}
+let kake=loadKake(),kkM=null,kkEdit=null;
+function saveKake(){try{localStorage.setItem("bw_kake",JSON.stringify(kake))}catch(e){}bkAuto()}
+function impKake(a){let n=0;const have=new Set(kake.map(r=>r.id));
+ a.forEach(r=>{if(r&&r.id&&/^\d{4}-\d\d-\d\d$/.test(r.date||"")&&Number.isFinite(+r.amt)&&!have.has(r.id)){kake.push({id:String(r.id),date:r.date,shop:String(r.shop||""),amt:Math.round(+r.amt),cat:KKC.includes(r.cat)?r.cat:"その他",memo:String(r.memo||""),lit:r.lit>0?+r.lit:0});have.add(r.id);n++}});return n}
+function kk(){
+ const today=nowStr().slice(0,10);if(!kkM)kkM=today.slice(0,7);
+ const ym=kkM,yen=n=>"¥"+Math.round(n).toLocaleString("ja-JP"),
+  list=kake.filter(r=>r.date.slice(0,7)===ym).sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id))),
+  tot=list.reduce((a,r)=>a+r.amt,0),by={};list.forEach(r=>by[r.cat]=(by[r.cat]||0)+r.amt);
+ const mx=Math.max(1,...Object.values(by)),gl=list.filter(r=>r.cat==="ガソリン"&&r.lit>0),gL=gl.reduce((a,r)=>a+r.lit,0),gY=gl.reduce((a,r)=>a+r.amt,0);
+ const shift=d=>{const [y,m]=ym.split("-").map(Number),t=new Date(y,m-1+d,1);return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")};
+ const e=kkEdit?kake.find(r=>r.id===kkEdit):null,v=e||{date:today,shop:"",amt:"",cat:"ガソリン",memo:"",lit:""};
+ const shops=[...new Set(kake.slice().reverse().map(r=>r.shop).filter(Boolean))];
+ const rows=list.map(r=>`<tr><td>${+r.date.slice(5,7)}/${+r.date.slice(8)}</td><td>${esc(r.shop)||"–"}<div class="note">${esc(r.cat)}${r.lit>0?` ${r.lit}L(${yen(r.amt/r.lit)}/L)`:""}${r.memo?" "+esc(r.memo):""}</div></td><td class="n"><b>${yen(r.amt)}</b></td><td><button data-e="${esc(r.id)}">編集</button></td></tr>`).join("");
+ $("#v-kk").innerHTML=`<div class="card"><div class="row" style="align-items:center"><button id="kkp">◀</button><b style="flex:1;text-align:center;font-size:17px">${ym.slice(0,4)}年${+ym.slice(5)}月</b><button id="kkn">▶</button></div>
+ <div style="font-size:26px;font-weight:700;margin:6px 0">${yen(tot)}</div>
+ ${Object.keys(by).length?KKC.filter(c=>by[c]).map(c=>`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;font-size:14px"><span style="width:92px">${c}</span><span style="flex:1"><span style="display:block;height:10px;border-radius:5px;background:var(--ac);width:${Math.max(3,by[c]/mx*100).toFixed(0)}%"></span></span><span style="width:84px;text-align:right">${yen(by[c])}</span></div>`).join(""):'<p class="note">この月の記録はまだありません</p>'}
+ ${gl.length?`<p class="note">ガソリン: ${gL.toFixed(1)}L / 平均 ${yen(gY/gL)}/L(リットルを入れた分だけ)</p>`:""}</div>
+ <div class="card"><b>${e?"記録を直す":"支出を記録"}</b>
+ <div class="row"><label>日付<input id="kd" type="date" value="${esc(v.date)}"></label><label>金額(円)<input id="ka" type="number" inputmode="numeric" min="0" step="1" value="${v.amt}"></label></div>
+ <div class="row"><label>店舗<input id="ks" list="kkshops" value="${esc(v.shop)}" placeholder="例: ENEOS"></label><label>種類<select id="kc">${KKC.map(c=>`<option ${c===v.cat?"selected":""}>${c}</option>`).join("")}</select></label></div>
+ <datalist id="kkshops">${shops.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
+ <div class="row"><label id="klw" ${v.cat==="ガソリン"?"":"hidden"}>給油量(L・任意)<input id="kl" type="number" inputmode="decimal" step="any" value="${v.lit||""}"></label><label>メモ<input id="km" value="${esc(v.memo)}"></label></div>
+ <div class="row"><button class="pri" id="kadd">${e?"保存":"追加"}</button>${e?'<button id="kcan">キャンセル</button><button id="kdel">削除</button>':""}</div></div>
+ <div class="card scroll"><table><tr><th>日</th><th>店舗・種類</th><th class="n">金額</th><th></th></tr>${rows||'<tr><td colspan="4">記録がありません</td></tr>'}</table></div>
+ <div class="card"><b>バックアップ</b><p class="note">家計の記録は、釣行と同じく、この端末と(ログインしていれば)Googleドライブにバックアップされます。文字として書き出すこともできます。</p>
+ <div class="row"><button id="kx">書き出す</button><button id="ki">読み込む</button></div>
+ <textarea id="kt" rows="5"></textarea><div class="row"><button id="kc2" hidden>コピー</button><button id="ko" class="pri" hidden>取り込む</button></div></div>`;
+ $("#kkp").onclick=()=>{kkM=shift(-1);kkEdit=null;kk()};$("#kkn").onclick=()=>{kkM=shift(1);kkEdit=null;kk()};
+ $("#kc").onchange=()=>{$("#klw").hidden=$("#kc").value!=="ガソリン"};
+ $("#ks").onchange=()=>{const x=$("#ks").value,last=kake.slice().reverse().find(r=>r.shop===x);if(last&&!e){$("#kc").value=last.cat;$("#kc").onchange()}};
+ $("#kadd").onclick=()=>{const amt=Math.round(+$("#ka").value),d=$("#kd").value;if(!d||!(amt>0)){alert("日付と金額を入れてください");return}
+  const o={date:d,shop:$("#ks").value.trim(),amt,cat:$("#kc").value,memo:$("#km").value.trim(),lit:$("#kc").value==="ガソリン"&&+$("#kl").value>0?+$("#kl").value:0};
+  if(e)Object.assign(e,o);else kake.push(Object.assign({id:"k"+Date.now().toString(36)+Math.random().toString(36).slice(2,5)},o));
+  kkM=d.slice(0,7);kkEdit=null;saveKake();kk()};
+ if(e){$("#kcan").onclick=()=>{kkEdit=null;kk()};$("#kdel").onclick=()=>{if(confirm("この記録を削除しますか?")){kake=kake.filter(r=>r.id!==e.id);kkEdit=null;saveKake();kk()}}}
+ $("#v-kk").querySelectorAll("button[data-e]").forEach(b=>b.onclick=()=>{kkEdit=b.dataset.e;kk();scrollTo(0,0)});
+ const kt=$("#kt");
+ $("#kx").onclick=()=>{kt.value=JSON.stringify(kake);$("#kc2").hidden=false;$("#ko").hidden=true;kt.select()};
+ $("#ki").onclick=()=>{kt.value="";kt.placeholder="ここに書き出した文字を貼って、「取り込む」を押してください";$("#ko").hidden=false;$("#kc2").hidden=true;kt.focus()};
+ $("#kc2").onclick=async()=>{try{await navigator.clipboard.writeText(kt.value);alert("コピーしました")}catch(x){kt.select();alert("文字を選択しました。コピーしてください")}};
+ $("#ko").onclick=()=>{try{const a=JSON.parse(kt.value),n=impKake(Array.isArray(a)?a:[]);if(n)saveKake();alert(n+" 件を取り込みました");kk()}catch(x){alert("読み込めませんでした")}};
+}
 function rec(){
  const rows=man.map((r,i)=>({r,i})).sort((a,b)=>b.r.time.localeCompare(a.r.time)).slice(0,30).map(({r,i})=>`<tr><td>${r.time.replace("T"," ")}</td><td>${esc(r.place)}</td><td class="n">${r.level??""}</td><td class="n">${r.flow??""}</td><td class="n">${r.temp??""}</td><td>${r.flow!=null?(r.end||"次の入力まで"):""}</td><td><button data-i="${i}">削除</button></td></tr>`).join("");
  $("#v-rec").innerHTML=`<div class="card"><p class="note">自動で取れない値(放流量など)を手で入れます。この端末のブラウザにだけ保存されます。<br>放流量は、終了日を入れるとその日まで、空欄なら次に入力するまで、同じ値が続くものとして扱います。</p>
