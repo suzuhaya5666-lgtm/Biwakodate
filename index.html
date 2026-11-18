@@ -56,6 +56,7 @@ textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1
 <body>
 <main>
 <h1>🎣 琵琶湖 釣りデータ</h1>
+<div id="stale" class="card bad warn" hidden></div>
 <nav id="tabs"></nav>
 <section id="v-now"></section>
 <section id="v-cal" hidden></section>
@@ -113,8 +114,11 @@ async function loadCsv(){
   try{const r=await fetch(u+"?t="+Date.now());if(!r.ok)throw new Error(r.status);
    const ls=(await r.text()).trim().split(/\r?\n/),hd=ls.shift().split(",");
    auto=ls.map(l=>{const c=l.split(","),o={};hd.forEach((k,i)=>o[k]=c[i]);return{time:o.time,place:o.place,level:num(o.level),flow:num(o.flow),temp:num(o.temp),src:"a"}});
-   err="";return}catch(e){err="データを読み込めませんでした("+e.message+")"}}
+   err="";staleChk();return}catch(e){err="データを読み込めませんでした("+e.message+")"}}
 }
+function staleChk(){const el=document.getElementById("stale");if(!el)return;let m=0;auto.forEach(r=>{const t=Date.parse(r.time);if(t>m)m=t});
+ const d=m?(Date.now()-m)/864e5:0;
+ if(m&&d>=5){el.hidden=false;el.textContent="⚠ 観測データが"+Math.floor(d)+"日以上、更新されていません。いま表示されている値は古い可能性があります。釣行などの判断には、気象庁・国土交通省の最新の情報を確認してください。"}else el.hidden=true}
 async function fetchRows(urls,src){
  for(const u of urls){
   try{const r=await fetch(u+"?t="+Date.now());if(!r.ok)throw new Error(r.status);
