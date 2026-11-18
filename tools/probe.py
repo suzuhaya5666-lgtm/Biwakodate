@@ -12,4 +12,4 @@ t=j[0]
 z=9;lat,lon=35.25,136.05
 x=int((lon+180)/360*2**z);y=int((1-math.log(math.tan(math.radians(lat))+1/math.cos(math.radians(lat)))/math.pi)/2*2**z);print("tile",z,x,y)
 for tt in (t,j2[0]):
-    get(f"{b}{tt['basetime']}/{tt['member']}/{tt['validtime']}/surf/hrpns/{z}/{x}/{y}.png","/tmp/t.png");print(os.path.getsize("/tmp/t.png"))
+    get(f"{b}{tt['basetime']}/none/{tt['validtime']}/surf/hrpns/{z}/{x}/{y}.png","/tmp/t.png");print(os.path.getsize("/tmp/t.png"))
