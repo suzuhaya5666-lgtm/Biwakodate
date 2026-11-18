@@ -1,16 +1,15 @@
-import subprocess
+import subprocess,json,math,os
 b="https://www.jma.go.jp/bosai/jmatile/data/nowc/"
-r=subprocess.run(["curl","-sS","-m","20","-D","-","-H","Origin: https://suzuhaya5666-lgtm.github.io",b+"targetTimes_N1.json"],capture_output=True,text=True)
-print(r.stdout[:1200],r.stderr[:200])
-import json,re
-body=r.stdout.split("\r\n\r\n",1)[-1]
-try:
-    j=json.loads(body);print(j[:3],len(j));t=j[0]
-    u=f"{b}{t['basetime']}/none/{t['validtime']}/surf/hrpns/9/{ (135.9+180)/360*512:.0f}/0.png"
-except Exception as e:print("ERR",e)
-import math
+O="Origin: https://suzuhaya5666-lgtm.github.io"
+def get(u,out):
+    subprocess.run(["curl","-sS","-m","20","-D","/tmp/h.txt","-o",out,"-H",O,u])
+    print(u[-60:],[l.strip() for l in open("/tmp/h.txt") if l.lower().startswith(("http","access-control","content-type"))])
+get(b+"targetTimes_N1.json","/tmp/n1.json")
+j=json.load(open("/tmp/n1.json"));print(len(j),j[:2],j[-2:])
+get(b+"targetTimes_N2.json","/tmp/n2.json")
+j2=json.load(open("/tmp/n2.json"));print(len(j2),j2[:2],j2[-2:])
+t=j[0]
 z=9;lat,lon=35.25,136.05
 x=int((lon+180)/360*2**z);y=int((1-math.log(math.tan(math.radians(lat))+1/math.cos(math.radians(lat)))/math.pi)/2*2**z);print("tile",z,x,y)
-u=f"{b}{t['basetime']}/none/{t['validtime']}/surf/hrpns/{z}/{x}/{y}.png"
-r=subprocess.run(["curl","-sS","-m","20","-D","-","-o","/tmp/t.png","-H","Origin: https://suzuhaya5666-lgtm.github.io",u],capture_output=True,text=True);print(r.stdout[:600])
-import os;print(os.path.getsize("/tmp/t.png"))
+for tt in (t,j2[0]):
+    get(f"{b}{tt['basetime']}/{tt['member']}/{tt['validtime']}/surf/hrpns/{z}/{x}/{y}.png","/tmp/t.png");print(os.path.getsize("/tmp/t.png"))
