@@ -214,19 +214,29 @@ async function loadRn(){if(rnBusy||!rnOn||Date.now()-rnAt<4*60e3)return;rnBusy=t
  try{const g=u=>fetch(RN_B+u,{signal:AbortSignal.timeout(8000)}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
   const [a,b]=await Promise.all([g("targetTimes_N1.json"),g("targetTimes_N2.json")]);rnC={n1:a,n2:b}}catch(e){rnAt=Date.now()-3*60e3}
  rnBusy=false;if(tab==="wx")wxPaint()}
-function rnFrame(k){if(!rnOn||!rnC||!rnC.n1.length||!wxD)return null;const ms=Date.parse(wxD[0].hourly.time[k]+":00+09:00"),last=rnMs(rnC.n1[0].validtime);
- if(k===nowIdx()){const f=rnC.n1[0];return{b:f.basetime,v:f.validtime,fc:0}}
- let best=null,bd=1e18;rnC.n1.concat(rnC.n2).forEach(f=>{const d=Math.abs(rnMs(f.validtime)-ms);if(d<bd){bd=d;best=f}});
- return best&&bd<=30*60e3?{b:best.basetime,v:best.validtime,fc:rnMs(best.validtime)>last?1:0}:null}
-function rnSvg(k){const f=rnFrame(k);if(!f)return"";const G=wxGeo(),n=2**RN_Z,{ax,bx,ay,by}=RNA,
+let rnSel=null,rnTimer=null;
+function rnFrames(){if(!rnC||!rnC.n1.length)return[];const l=rnMs(rnC.n1[0].validtime);
+ return rnC.n1.slice().reverse().map(f=>({b:f.basetime,v:f.validtime,fc:0})).concat(rnC.n2.slice().reverse().filter(f=>rnMs(f.validtime)>l).map(f=>({b:f.basetime,v:f.validtime,fc:1})))}
+function rnIdx(F){F=F||rnFrames();let i=rnSel?F.findIndex(f=>f.v===rnSel):-1;if(i<0)i=F.filter(f=>!f.fc).length-1;return i}
+function rnSvg(){if(!rnOn)return"";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"";const G=wxGeo(),n=2**RN_Z,{ax,bx,ay,by}=RNA,
  lo=x=>(x-bx)/ax,mm=y=>(y-by)/ay,tx=l=>(l+180)/360*n,ty=m=>(1-m/Math.PI)/2*n,
  x0=Math.floor(Math.min(tx(lo(-90)),tx(lo(G.W+100)))),x1=Math.floor(Math.max(tx(lo(-90)),tx(lo(G.W+100)))),
  y0=Math.floor(Math.min(ty(mm(-10)),ty(mm(G.H+10)))),y1=Math.floor(Math.max(ty(mm(-10)),ty(mm(G.H+10)))),sx=ax*360/(256*n),sy=-ay*2*Math.PI/(256*n);let o="";
  for(let X=x0;X<=x1;X++)for(let Y=y0;Y<=y1;Y++){const px=ax*(X*360/n-180)+bx,py=ay*(Math.PI-2*Math.PI*Y/n)+by;
   o+=`<image href="${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png" width="256" height="256" transform="translate(${px.toFixed(2)},${py.toFixed(2)}) scale(${sx.toFixed(5)},${sy.toFixed(5)})" opacity=".75" style="pointer-events:none"/>`}
  return o}
-function rnLab(k){if(!rnOn)return"";if(!rnC)return"雨雲を読み込み中…";const f=rnFrame(k);if(!f)return"この時刻の雨雲データはありません(過去3時間〜1時間先のみ)";
- const t=new Date(rnMs(f.v)+9*36e5),h=t.getUTCHours(),m=t.getUTCMinutes();return`雨雲 ${h}:${String(m).padStart(2,"0")} ${f.fc?"の予測":"の実況"}(気象庁)`}
+function rnLab(){if(!rnOn)return"";if(!rnC)return"雨雲を読み込み中…";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"雨雲データを取得できませんでした";
+ const t=new Date(rnMs(f.v)+9*36e5),h=t.getUTCHours(),m=t.getUTCMinutes();return`${h}:${String(m).padStart(2,"0")} ${f.fc?"の予測":"の実況"}`+(rnIdx(F)===F.filter(x=>!x.fc).length-1?"(いま)":"")}
+function rnStop(){if(rnTimer){clearInterval(rnTimer);rnTimer=null}const b=document.getElementById("rnp");if(b)b.textContent="▶"}
+function rnPaintOnly(){const r=document.getElementById("wxr"),l=document.getElementById("rnl"),sl=document.getElementById("rns");if(r)r.innerHTML=rnSvg();if(l)l.textContent=rnLab();if(sl){const F=rnFrames();sl.value=rnIdx(F)}}
+function rnCtl(){if(!rnOn)return"";const F=rnFrames();if(!F.length)return`<div class="note" id="rnl">${rnLab()}</div>`;
+ return`<div class="row" style="align-items:center;gap:8px;margin-top:4px"><button id="rnp" style="min-width:44px">▶</button><input id="rns" type="range" min="0" max="${F.length-1}" step="1" value="${rnIdx(F)}" style="flex:1;min-width:0"><b id="rnl" style="font-size:13px;text-align:right;white-space:nowrap">${rnLab()}</b></div>
+ <div class="note" style="margin-top:0">雨雲: 過去3時間〜1時間先を5分刻みで動かせます(気象庁)</div>`}
+function rnBind(){const sl=document.getElementById("rns"),pb=document.getElementById("rnp");if(!sl)return;
+ sl.oninput=()=>{rnStop();const F=rnFrames();rnSel=F[+sl.value].v;rnPaintOnly()};
+ pb.onclick=()=>{if(rnTimer){rnStop();return}const F=rnFrames();F.forEach(f=>{const n=2**RN_Z;/* 先読み */const G=wxGeo(),{ax,bx,ay,by}=RNA,tx=l=>(l+180)/360*n,ty=m=>(1-m/Math.PI)/2*n;for(let X=Math.floor(tx((-90-bx)/ax));X<=Math.floor(tx((G.W+100-bx)/ax));X++)for(let Y=Math.floor(Math.min(ty((-10-by)/ay),ty((G.H+10-by)/ay)));Y<=Math.floor(Math.max(ty((-10-by)/ay),ty((G.H+10-by)/ay)));Y++){const im=new Image();im.src=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`}});
+  pb.textContent="⏸";let i=rnIdx(F);if(i>=F.length-1)i=-1;
+  rnTimer=setInterval(()=>{if(!document.getElementById("rns")||tab!=="wx"){rnStop();return}const F2=rnFrames();i++;if(i>=F2.length){rnStop();return}rnSel=F2[i].v;rnPaintOnly()},500)}}
 function shoreSvg(k){if(!wxW||!wxOn)return"";const S=wxGeo().S,n=S.length;let o="";
  for(let j=0;j<n;j++){const h=(wxW[j][k]+wxW[(j+1)%n][k])/2;if(h<.1)continue;const a=S[j],b=S[(j+1)%n];
   o+=`<line x1="${a[0].toFixed(0)}" y1="${a[1].toFixed(0)}" x2="${b[0].toFixed(0)}" y2="${b[1].toFixed(0)}" stroke="${wcol(h)}" stroke-width="12" stroke-linecap="round" opacity="${Math.max(.3,Math.min(.95,h/.35)).toFixed(2)}"/>`}
@@ -244,14 +254,14 @@ function pinsSvg(k){const G=wxGeo();let g="";
 function wxLab(k){if(!wxD)return"";const t=wxD[0].hourly.time[k],td=wxD[0].current.time.slice(0,10),dd=Math.round((new Date(t.slice(0,10))-new Date(td))/864e5),n=nowIdx();
  return`${{"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"}[dd]||t.slice(5,10)} ${+t.slice(11,13)}時 ${k===n?"(いま)":k<n?"(過去)":"(予報)"}`}
 function wxPaint(){if(!wxD)return;const k=wxK;
- const a=$("#wxs"),b=$("#wxp"),l=$("#wlab"),sl=$("#wsl");{const r=$("#wxr"),rl=$("#rnl");if(r)r.innerHTML=rnSvg(k);if(rl)rl.textContent=rnLab(k)}if(a)a.innerHTML=shoreSvg(k);if(b)b.innerHTML=pinsSvg(k);if(l)l.textContent=wxLab(k);if(sl)sl.value=k}
+ const a=$("#wxs"),b=$("#wxp"),l=$("#wlab"),sl=$("#wsl");rnPaintOnly();if(a)a.innerHTML=shoreSvg(k);if(b)b.innerHTML=pinsSvg(k);if(l)l.textContent=wxLab(k);if(sl)sl.value=k}
 function wx(){
- loadTn();loadRn();
+ rnStop();loadTn();loadRn();
  if((!wxD||Date.now()-wxAt>15*60e3)&&Date.now()-wxTry>60e3)loadWx();
  if(wxD&&!wxW){try{wxW=wxWave()}catch(e){wxW=null}}
  if(wxD&&(wxK<0||wxK>=wxD[0].hourly.time.length))wxK=nowIdx();
  const G=wxGeo(),W=G.W,H=G.H,N=wxD?wxD[0].hourly.time.length:1,K=Math.max(0,wxK);
- const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxr">${rnSvg(K)}</g><g id="wxs">${shoreSvg(K)}</g><g id="wxp">${pinsSvg(K)}</g>`;
+ const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxr">${rnSvg()}</g><g id="wxs">${shoreSvg(K)}</g><g id="wxp">${pinsSvg(K)}</g>`;
  let sh="";
  if(wxSel>=0&&wxD&&wxD[wxSel]){const D=wxD[wxSel],c=D.current,hh=D.hourly,ds=D.daily,nowH=c.time.slice(0,13),td=c.time.slice(0,10),nm=WXP[wxSel][0];
   const DL={"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"},dl=day=>DL[Math.round((new Date(day)-new Date(td))/864e5)]||day,wd=day=>"日月火水木金土"[new Date(day+"T00:00").getDay()];
@@ -274,13 +284,13 @@ function wx(){
  $("#v-wx").innerHTML=`<div id="wxm" class="${sh?"op":""}"><svg viewBox="-90 -10 ${W+190} ${H+20}" style="background:var(--sml);border-radius:12px">${g}</svg>
   <div class="row" style="margin-top:8px"><button id="wnow">いま</button><button id="wm">−1時間</button><input type="range" id="wsl" min="0" max="${N-1}" value="${K}" style="flex:1;min-width:120px"><button id="wp">+1時間</button></div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b id="wlab">${wxLab(K)}</b><button id="wwv" class="${wxOn?"pri":""}">荒れの目安 ${wxOn?"表示中":"非表示"}</button><button id="wrn" class="${rnOn?"pri":""}">雨雲 ${rnOn?"表示中":"非表示"}</button></div>
-  <div class="note" id="rnl" style="margin-top:2px">${rnLab(K)}</div>
+  ${rnCtl()}
   <p class="note"><span style="color:#f2d04b">━</span>〜0.2m <span style="color:#f2994a">━</span>0.3m <span style="color:#e5533d">━</span>0.6m <span style="color:#a4161a">━</span>1m以上(風の吹き寄せる岸の波高の目安)。風がやんでも、約4時間かけて薄くなります。風の予報から計算した推定で、実測ではありません。安全の判断には使わないでください。</p>
   <p class="note">天気: Open-Meteo(予報モデルの値)。雨雲: 気象庁の高解像度降水ナウキャスト(水色=弱い、黄・橙・赤=強い)。${wxAt?"取得 "+new Date(wxAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""} <button id="wxr">更新</button> ${wxBusy?"読み込み中…":""} ${esc(wxErr)}</p></div>${sh}`;
  {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}}}
  {const sl=$("#wsl");if(sl){sl.oninput=e=>{wxK=+e.target.value;wxPaint()};
   $("#wnow").onclick=()=>{wxK=nowIdx();wxPaint()};$("#wm").onclick=()=>{wxK=Math.max(0,wxK-1);wxPaint()};$("#wp").onclick=()=>{wxK=Math.min(N-1,wxK+1);wxPaint()};
-  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};{const b=$("#wrn");if(b)b.onclick=()=>{rnOn=!rnOn;try{localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
+  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};{rnBind();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;try{localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
  {const c=$("#wxc");if(c)c.onclick=()=>{wxSel=-1;wx()}}
  {const h=$("#wmh"),d=$("#wmd");if(h){h.onclick=()=>{wxMode="h";wx()};d.onclick=()=>{wxMode="d";wx()}}}
  {const r=$("#wxr");if(r)r.onclick=()=>{wxAt=0;loadWx()}}
