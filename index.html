@@ -436,7 +436,7 @@ function chartRender(root,st,o){const P=o.P||"",Q=id=>root.querySelector("#"+P+i
  const set=(k,v)=>{st[k]=v;o.save();o.rerender()},setY=(i,v)=>{const a=st.yr[cm]||["",""];a[i]=v;st.yr[cm]=a;o.save();o.rerender()};
  {const b=Q("bs");if(b){b.value=st.base;b.onchange=e=>set("base",e.target.value)}}
  Q("cm").onchange=e=>set("cm",e.target.value);if(Q("rg"))Q("rg").onchange=e=>set("rng",e.target.value);
- if(custom&&!o.fixed){Q("cs").onchange=e=>set("cs",e.target.value);Q("ce").onchange=e=>set("ce",e.target.value)}
+ if(custom&&!o.fixed){let dty=false;["cs","ce"].forEach(k=>{const el=Q(k);el.onchange=e=>{st[k]=e.target.value;o.save();dty=true};el.onblur=()=>{if(dty){dty=false;setTimeout(o.rerender,150)}}})}
  Q("y0").onchange=e=>setY(0,e.target.value);Q("y1").onchange=e=>setY(1,e.target.value);
  Q("ya").onclick=()=>{delete st.yr[cm];o.save();o.rerender()};
  if(need)setTimeout(loadHistHourly,0);
