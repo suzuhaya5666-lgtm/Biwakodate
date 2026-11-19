@@ -158,7 +158,7 @@ const LAKE=[[283.4,37.4],[281.1,37.4],[279.5,39.6],[281.1,53.2],[278.3,56.6],[27
 const WXU="https://api.open-meteo.com/v1/forecast?latitude="+WXP.map(p=>p[1]).join(",")+"&longitude="+WXP.map(p=>p[2]).join(",")+"&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&hourly=weather_code,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m&daily=precipitation_sum,weather_code,wind_speed_10m_max,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&wind_speed_unit=ms&past_days=2&forecast_days=2";
 const WD_URLS=[REPO.replace("history/","")+"weather_daily.csv","data/weather_daily.csv"];
 const WXN=c=>c===0?"快晴":c===1?"晴れ":c===2?"薄曇り":c===3?"曇り":c<=48?"霧":c<=57?"霧雨":c<=65?"雨":c<=67?"みぞれ":c<=77?"雪":c<=82?"にわか雨":c<=86?"にわか雪":"雷雨";
-let wxD=null,wxAt=0,wxErr="",wxSel=-1,wxBusy=false,wxMode="h",wxHist=null,wxW=null,wxG=null,wxK=-1,wxOn=true,wxTry=0,wxF=null,wxFTry=0;
+let wxD=null,wxAt=0,wxErr="",wxSel=-1,wxBusy=false,wxMode="h",wxHist=null,wxW=null,wxG=null,wxK=-1,wxOn=true,wxTry=0,wxF=null,wxFTry=0,wxSouth=(()=>{try{return localStorage.getItem("biwa_ws")==="1"}catch(e){return false}})();
 const WXE=c=>c===0?"☀️":c===1?"🌤":c===2?"⛅":c===3?"☁️":c<=48?"🌫":c<=57?"🌦":c<=67?"🌧":c<=77?"🌨":c<=82?"🌧":c<=86?"🌨":"⛈";
 const DIRN=["北","北東","東","南東","南","南西","西","北西"],dirN=d=>DIRN[Math.round(d/45)%8];
 const arrow=d=>`<span style="display:inline-block;transform:rotate(${d+180}deg)">↑</span>`;
@@ -244,9 +244,9 @@ function shoreSvg(k){if(!wxW||!wxOn)return"";const S=wxGeo().S,n=S.length;let o=
   o+=`<line x1="${a[0].toFixed(0)}" y1="${a[1].toFixed(0)}" x2="${b[0].toFixed(0)}" y2="${b[1].toFixed(0)}" stroke="${wcol(h)}" stroke-width="12" stroke-linecap="round" opacity="${Math.max(.3,Math.min(.95,h/.35)).toFixed(2)}"/>`}
  return o}
 function pinsSvg(k){const G=wxGeo();let g="";
- WXP.forEach(([nm,la,lo,sd,x,y],i)=>{const D=wxD&&wxD[i],hh=D&&D.hourly,c=hh&&hh.wind_speed_10m[k]!=null?{weather_code:hh.weather_code[k],wind_speed_10m:hh.wind_speed_10m[k],wind_direction_10m:hh.wind_direction_10m[k],t:hh.temperature_2m?hh.temperature_2m[k]:null}:null,l=sd==="l";
+ WXP.forEach(([nm,la,lo,sd,x,y],i)=>{if(wxSouth?y<430:(nm==="烏丸半島"||nm==="井筒"))return;const SC=wxSouth?.65:1.08;const D=wxD&&wxD[i],hh=D&&D.hourly,c=hh&&hh.wind_speed_10m[k]!=null?{weather_code:hh.weather_code[k],wind_speed_10m:hh.wind_speed_10m[k],wind_direction_10m:hh.wind_direction_10m[k],t:hh.temperature_2m?hh.temperature_2m[k]:null}:null,l=sd==="l";
   const tx=l?-37:37,an=l?"end":"start";
-  g+=`<g class="pin" data-i="${i}" transform="translate(${x},${y})"><circle r="26" fill="var(--card)" stroke="${i===wxSel?"#d1242f":"var(--ac)"}" stroke-width="${i===wxSel?4:2}"/>
+  g+=`<g class="pin" data-i="${i}" transform="translate(${x},${y}) scale(${SC})"><circle r="26" fill="var(--card)" stroke="${i===wxSel?"#d1242f":"var(--ac)"}" stroke-width="${i===wxSel?4:2}"/>
    <text y="10" font-size="30" text-anchor="middle">${c?WXE(c.weather_code):"…"}</text>`+
    (c?`<g transform="translate(${l?-21:21},21)"><circle r="12" fill="var(--ac)"/><g transform="rotate(${c.wind_direction_10m+180}) scale(1.2)"><path d="M0,-7 L5,4 L0,1 L-5,4Z" fill="#fff"/></g></g>`:"")+
    `<text x="${tx}" y="-4" font-size="20" font-weight="700" text-anchor="${an}" fill="var(--tx)" stroke="var(--card)" stroke-width="4" paint-order="stroke">${nm}</text>
@@ -283,16 +283,16 @@ function wx(){
   <div class="note" style="margin:4px 0">雨量の合計: 一昨日 <b>${pr(ds.time[0])}</b> / 昨日 <b>${pr(ds.time[1])}</b> / 今日 <b>${pr(td)}</b> / 明日 <b>${pr(ds.time[3])}</b> mm</div>
   <div class="row"><button class="${wxMode==="h"?"pri":""}" id="wmh">1時間ごと(48時間前から)</button><button class="${wxMode==="d"?"pri":""}" id="wmd">日ごとの記録</button></div>
   <div class="tb">${body}</div>${tnD?TNNOTE:""}</div></div>`}
- $("#v-wx").innerHTML=`<div id="wxm" class="${sh?"op":""}"><svg viewBox="-90 -10 ${W+190} ${H+20}" style="background:var(--sml);border-radius:12px">${g}</svg>
+ $("#v-wx").innerHTML=`<div id="wxm" class="${sh?"op":""}"><svg viewBox="${wxSouth?"-75 420 290 215":`${-90-(W+190)*.05} ${-10-(H+20)*.05} ${(W+190)*1.1} ${(H+20)*1.1}`}" style="background:var(--sml);border-radius:12px">${g}</svg>
   <div class="row" style="margin-top:8px"><button id="wnow">いま</button><button id="wm">−1時間</button><input type="range" id="wsl" min="0" max="${N-1}" value="${K}" style="flex:1;min-width:120px"><button id="wp">+1時間</button></div>
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b id="wlab">${wxLab(K)}</b><button id="wwv" class="${wxOn?"pri":""}">荒れの目安 ${wxOn?"表示中":"非表示"}</button><button id="wrn" class="${rnOn?"pri":""}">雨雲 ${rnOn?"表示中":"非表示"}</button></div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b id="wlab">${wxLab(K)}</b><button id="wwv" class="${wxOn?"pri":""}">荒れの目安 ${wxOn?"表示中":"非表示"}</button><button id="wrn" class="${rnOn?"pri":""}">雨雲 ${rnOn?"表示中":"非表示"}</button><button id="wsb" class="${wxSouth?"pri":""}">${wxSouth?"全体に戻す":"南湖拡大"}</button></div>
   ${rnCtl()}
   <p class="note"><span style="color:#f2d04b">━</span>〜0.2m <span style="color:#f2994a">━</span>0.3m <span style="color:#e5533d">━</span>0.6m <span style="color:#a4161a">━</span>1m以上(風の吹き寄せる岸の波高の目安)。風がやんでも、約4時間かけて薄くなります。風の予報から計算した推定で、実測ではありません。安全の判断には使わないでください。</p>
   <p class="note">天気: Open-Meteo(予報モデルの値)。雨雲: 気象庁の高解像度降水ナウキャスト(水色=弱い、黄・橙・赤=強い)。${wxAt?"取得 "+new Date(wxAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""} <button id="wxr">更新</button> ${wxBusy?"読み込み中…":""} ${esc(wxErr)}</p></div>${sh}`;
  {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}}}
  {const sl=$("#wsl");if(sl){sl.oninput=e=>{wxK=+e.target.value;wxPaint()};
   $("#wnow").onclick=()=>{wxK=nowIdx();wxPaint()};$("#wm").onclick=()=>{wxK=Math.max(0,wxK-1);wxPaint()};$("#wp").onclick=()=>{wxK=Math.min(N-1,wxK+1);wxPaint()};
-  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};{rnBind();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;try{localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
+  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};{rnBind();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;try{localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
  {const c=$("#wxc");if(c)c.onclick=()=>{wxSel=-1;wx()}}
  {const h=$("#wmh"),d=$("#wmd");if(h){h.onclick=()=>{wxMode="h";wx()};d.onclick=()=>{wxMode="d";wx()}}}
  {const r=$("#wxr");if(r)r.onclick=()=>{wxAt=0;loadWx()}}
