@@ -580,7 +580,7 @@ const maxLen=f=>{const m=(f.sz||[]).map(z=>parseFloat(z.len)).filter(x=>x>0);ret
 const fishSum=t=>(t.fish||[]).map(f=>esc(f.sp)+" "+f.n+"本"+(maxLen(f)?"(最大"+maxLen(f)+"cm)":"")).join("、");
 const trSorted=()=>trips.slice().sort((a,b)=>(b.date+b.id).localeCompare(a.date+a.id));
 const recent5=f=>{const o=[];for(const t of trSorted()){for(const v of f(t)){if(v&&!o.includes(v))o.push(v);if(o.length>=5)return o}}return o};
-const recBox=(key,arr)=>arr.length?`<div class="note" style="margin-top:2px">最近の入力(タップで入れる)</div><div style="display:flex;flex-direction:column;gap:4px;margin:2px 0 8px">${arr.map(v=>`<button type="button" data-rk="${key}" data-rv="${esc(v)}" style="text-align:left">${esc(v)}</button>`).join("")}</div>`:"";
+const recBox=(key,arr)=>arr.length?`<div class="rcb" data-rkbox="${key}" style="display:none"><div class="note" style="margin-top:2px">最近の入力(タップで入れる)</div><div style="display:flex;flex-direction:column;gap:4px;margin:2px 0 8px">${arr.map(v=>`<button type="button" data-rk="${key}" data-rv="${esc(v)}" style="text-align:left">${esc(v)}</button>`).join("")}</div></div>`:"";
 const tkHist=k=>[...new Set(trips.map(t=>t.tk&&t.tk[k]).filter(Boolean))];
 function fishBlock(){return tf.fish.map((f,i)=>`<div class="card" style="margin:8px 0;padding:10px"><div class="row" style="align-items:flex-end"><label>魚種<input data-k="sp" data-i="${i}" list="spl" value="${esc(f.sp)}" placeholder="例: オオクチバス"></label><label style="max-width:84px">本数<input data-k="n" data-i="${i}" type="number" min="1" max="30" inputmode="numeric" value="${f.n}"></label><button data-del="${i}">削除</button></div>
  ${f.n>1?`<div class="row"><button class="pl ${f.mode==="max"?"":"pri"}" data-md="each" data-i="${i}">全部入力</button><button class="pl ${f.mode==="max"?"pri":""}" data-md="max" data-i="${i}">最大のみ</button></div>`:""}
@@ -672,7 +672,7 @@ function trip(){
   <div class="row"><button class="pri" id="fs">保存</button><button id="fx">キャンセル</button></div></div>`;
   el.querySelectorAll("button[data-s]").forEach(b=>b.onclick=()=>{const s=b.dataset.s,i=tf.spots.indexOf(s);if(i<0)tf.spots.push(s);else tf.spots.splice(i,1);const on=tf.spots.includes(s);b.style.background=on?"var(--ac)":"";b.style.color=on?"#fff":""});
   el.querySelectorAll("button[data-a]").forEach(b=>b.onclick=()=>{tf.area=b.dataset.a;const o=tf.area==="other";$("#fbw").hidden=o;$("#fot").hidden=!o;el.querySelectorAll("button[data-a]").forEach(x=>x.classList.toggle("pri",x.dataset.a===tf.area))});
-  el.querySelectorAll("button[data-rk=fo],button[data-rk=fp]").forEach(b=>b.onclick=()=>{const i=$("#"+b.dataset.rk),v=b.dataset.rv;if(b.dataset.rk==="fp")i.value=v;else{const a=(i.value||"").split(/[、,]/).map(x=>x.trim()).filter(Boolean);if(!a.includes(v))a.push(v);i.value=a.join("、")}});
+  el.querySelectorAll("button[data-rk=fo],button[data-rk=fp]").forEach(b=>b.onclick=()=>{const i=$("#"+b.dataset.rk),v=b.dataset.rv;if(b.dataset.rk==="fp")i.value=v;else{const a=(i.value||"").split(/[、,]/).map(x=>x.trim()).filter(Boolean);if(!a.includes(v))a.push(v);i.value=a.join("、")}b.closest(".rcb").style.display="none"});
   formExtra(el);
   $("#fx").onclick=()=>{tripEdit=null;trip()};
   $("#fs").onclick=()=>{const date=$("#fd").value;if(!date)return;let end=$("#fe").value||"";if(end<=date)end="";
@@ -944,6 +944,11 @@ function openDp(inp){
 }
 document.addEventListener("click",e=>{const t=e.target;if(t&&t.matches&&t.matches("input[data-dp]")){e.preventDefault();t.blur();openDp(t)}},true);
 
+const rkKey=t=>t&&t.matches&&t.closest("#v-trip")?(t.dataset&&["reel","rod"].includes(t.dataset.t)?t.dataset.t:(t.id==="fo"||t.id==="fp"?t.id:null)):null;
+const hideRc=()=>document.querySelectorAll(".rcb").forEach(x=>x.style.display="none");
+document.addEventListener("focusin",e=>{if(e.target.closest&&e.target.closest(".rcb"))return;const k=rkKey(e.target);hideRc();if(k&&!e.target.value)document.querySelectorAll('.rcb[data-rkbox="'+k+'"]').forEach(x=>x.style.display="")},true);
+document.addEventListener("focusout",e=>{if(!rkKey(e.target))return;setTimeout(()=>{const a=document.activeElement;if(!(a&&a.closest&&(a.closest(".rcb")||rkKey(a))))hideRc()},400)},true);
+document.addEventListener("input",e=>{const k=rkKey(e.target);if(k&&e.target.value)document.querySelectorAll('.rcb[data-rkbox="'+k+'"]').forEach(x=>x.style.display="none")},true);
 /* 入力候補: 数文字打つと、過去の入力から一致するものを縦に出す */
 const split=v=>String(v||"").split(/[、,]/).map(x=>x.trim()).filter(Boolean);
 const srcOf=k=>{const tr=(typeof trSorted==="function"?trSorted():[]),o=[],add=v=>{if(v&&!o.includes(v))o.push(v)};
