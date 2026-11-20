@@ -427,7 +427,7 @@ function chartRender(root,st,o){const P=o.P||"",Q=id=>root.querySelector("#"+P+i
  const chips=places.length?`<div class="row">${places.map((p,i)=>{const on=!hid.includes(p),c=COL[i%COL.length];return`<button class="pl" data-i="${i}" style="border-color:${c};${on?`background:${c};color:#fff`:"opacity:.45;text-decoration:line-through"}">${esc(p)}</button>`}).join("")}</div>`:"";
  root.innerHTML=`<div class="card"><div class="row"><select id="${P}cm">${Object.keys(LAB).map(k=>`<option value="${k}">${LAB[k]}</option>`).join("")}</select>
  ${o.fixed?"":`<select id="${P}rg"><option value="2">2日</option><option value="7">7日</option><option value="30">30日</option><option value="0">すべて</option><option value="c">期間を指定</option></select>`}</div>
- ${custom&&!o.fixed?`<div class="row"><label>開始日<input id="${P}cs" type="date" value="${st.cs}"></label><label>終了日<input id="${P}ce" type="date" value="${st.ce}"></label></div>`:""}
+ ${custom&&!o.fixed?`<div class="row"><label>開始日<input id="${P}cs" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ" value="${st.cs}"></label><label>終了日<input id="${P}ce" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ" value="${st.ce}"></label></div>`:""}
  ${cm==="temp"?`<div class="row">${baseSel(P)}</div>`:""}
  ${chips}${svg}${leg}${nfix?`<p class="note">⚠️ 前後の値から5℃以上ずれた異常値 ${nfix} 件を、前後の正常値の平均に直して表示しています(元のデータは変えていません)。</p>`:""}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}<div class="row"><label>縦軸の最小<input id="${P}y0" type="number" step="any" placeholder="自動" value="${yr[0]}"></label><label>縦軸の最大<input id="${P}y1" type="number" step="any" placeholder="自動" value="${yr[1]}"></label><button id="${P}ya">自動に戻す</button></div></div>`;
  Q("cm").value=cm;if(Q("rg"))Q("rg").value=st.rng;
@@ -644,7 +644,7 @@ function trip(){
  const el=$("#v-trip");
  if(tripEdit!==null){const t=tf,ot=t.area==="other";tf.fish=Array.isArray(tf.fish)?tf.fish:[];tf.tk=tf.tk||{};tf.tm=tf.tm||{};tf.photos=tf.photos||[];tf.fish.forEach(fixFish);
   el.innerHTML=`<div class="card"><b>${tripEdit==="new"?"釣行を追加":"釣行を編集"}</b>
-  <div class="row" style="margin-top:8px"><label>開始日<input id="fd" type="date" value="${t.date}"></label><label>終了日(日帰りは空欄)<input id="fe" type="date" value="${t.end||""}"></label></div>
+  <div class="row" style="margin-top:8px"><label>開始日<input id="fd" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ" value="${t.date}"></label><label>終了日(日帰りは空欄)<input id="fe" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ" value="${t.end||""}"></label></div>
   <div class="note">釣り場</div>
   <div class="row"><button class="pl ${ot?"":"pri"}" data-a="bw">琵琶湖</button><button class="pl ${ot?"pri":""}" data-a="other">その他</button></div>
   <div id="fbw" ${ot?"hidden":""}><div class="note">行った場所(複数選べます)</div>
@@ -835,7 +835,7 @@ function kk(){
  ${Object.keys(by).length?KKC.filter(c=>by[c]).map(c=>`<div style="display:flex;align-items:center;gap:8px;margin:3px 0;font-size:14px"><span style="width:92px">${c}</span><span style="flex:1"><span style="display:block;height:10px;border-radius:5px;background:var(--ac);width:${Math.max(3,by[c]/mx*100).toFixed(0)}%"></span></span><span style="width:84px;text-align:right">${yen(by[c])}</span></div>`).join(""):'<p class="note">この月の記録はまだありません</p>'}
  ${gl.length?`<p class="note">ガソリン: ${gL.toFixed(1)}L / 平均 ${yen(gY/gL)}/L(リットルを入れた分だけ)</p>`:""}</div>
  <div class="card"><b>${e?"記録を直す":"支出を記録"}</b>
- <div class="row"><label>日付<input id="kd" type="date" value="${esc(v.date)}"></label><label>金額(円)<input id="ka" type="number" inputmode="numeric" min="0" step="1" value="${v.amt}"></label></div>
+ <div class="row"><label>日付<input id="kd" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ" value="${esc(v.date)}"></label><label>金額(円)<input id="ka" type="number" inputmode="numeric" min="0" step="1" value="${v.amt}"></label></div>
  <div class="row"><label>店舗<input id="ks" list="kkshops" value="${esc(v.shop)}" placeholder="例: ENEOS"></label><label>種類<select id="kc">${KKC.map(c=>`<option ${c===v.cat?"selected":""}>${c}</option>`).join("")}</select></label></div>
  <datalist id="kkshops">${shops.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
  <div class="row"><label id="klw" ${v.cat==="ガソリン"?"":"hidden"}>給油量(L・任意)<input id="kl" type="number" inputmode="decimal" step="any" value="${v.lit||""}"></label><label>メモ<input id="km" value="${esc(v.memo)}"></label></div>
@@ -863,7 +863,7 @@ function rec(){
  const rows=man.map((r,i)=>({r,i})).sort((a,b)=>b.r.time.localeCompare(a.r.time)).slice(0,30).map(({r,i})=>`<tr><td>${r.time.replace("T"," ")}</td><td>${esc(r.place)}</td><td class="n">${r.level??""}</td><td class="n">${r.flow??""}</td><td class="n">${r.temp??""}</td><td>${r.flow!=null?(r.end||"次の入力まで"):""}</td><td><button data-i="${i}">削除</button></td></tr>`).join("");
  $("#v-rec").innerHTML=`<div class="card"><p class="note">自動で取れない値(放流量など)を手で入れます。この端末のブラウザにだけ保存されます。<br>放流量は、終了日を入れるとその日まで、空欄なら次に入力するまで、同じ値が続くものとして扱います。</p>
  <div class="row"><label>日時<input id="t" type="datetime-local" value="${nowStr()}"></label><label>地点<input id="p" value="瀬田川洗堰"></label></div>
- <div class="row"><label>水位(m)<input id="l" type="number" step="any"></label><label>放流量(m³/s)<input id="f" type="number" step="any"></label><label>水温(℃)<input id="w" type="number" step="any"></label><label>放流量の終了日(任意)<input id="e" type="date"></label></div>
+ <div class="row"><label>水位(m)<input id="l" type="number" step="any"></label><label>放流量(m³/s)<input id="f" type="number" step="any"></label><label>水温(℃)<input id="w" type="number" step="any"></label><label>放流量の終了日(任意)<input id="e" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ"></label></div>
  <button class="pri" id="add">追加</button></div>
  <div class="card scroll"><table><tr><th>日時</th><th>地点</th><th>水位</th><th>放流量</th><th>水温</th><th>放流量の期間</th><th></th></tr>${rows||'<tr><td colspan="7">まだ記録がありません</td></tr>'}</table></div>
  <div class="card"><b>バックアップ</b><p class="note">手入力の記録を、文字として書き出し・読み込みできます。書き出した文字は、メモアプリなどに保存してください。</p>
@@ -891,6 +891,64 @@ if(/[?&]dbg=1/.test(location.search)){let lt=Date.now(),mx=0,pd=0;setInterval(()
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState!=="visible")return;if(Date.now()-ntTry>10*60e3)loadAlerts();if(Date.now()-rvTry>10*60e3)loadRivers();if(Date.now()-wxAt>15*60e3&&!wxBusy)loadWx()});
 
 (()=>{const tryBk=()=>{if(bkInfo().pend&&gOK()&&(trips.length||man.length))bkRun(false)};tryBk();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")tryBk()})})();
+
+/* ===== 自作の日付選択(年月→日にち) と 入力候補 ===== */
+(()=>{
+const pad=n=>String(n).padStart(2,"0"),iso=(y,m,d)=>`${y}-${pad(m)}-${pad(d)}`,WD=["日","月","火","水","木","金","土"];
+let box=null;
+function closeDp(){if(box){box.remove();box=null}}
+function openDp(inp){
+ closeDp();const now=new Date(),td=iso(now.getFullYear(),now.getMonth()+1,now.getDate());
+ const cur=/^\d{4}-\d{2}-\d{2}$/.test(inp.value)?inp.value:td;
+ let y=+cur.slice(0,4),m=+cur.slice(5,7),mode="d";
+ box=document.createElement("div");box.style.cssText="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center";
+ const pick=v=>{inp.value=v;inp.dispatchEvent(new Event("change",{bubbles:true}));inp.dispatchEvent(new Event("input",{bubbles:true}));closeDp();inp.blur()};
+ const B="padding:0;border-radius:10px;font-size:18px;height:46px";
+ function draw(){
+  let h=`<div style="width:100%;max-width:480px;background:var(--card);border-radius:16px 16px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 16px rgba(0,0,0,.25)">`;
+  if(mode==="d"){
+   const first=new Date(y,m-1,1).getDay(),last=new Date(y,m,0).getDate();
+   h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><button type="button" id="dpym" style="flex:1;text-align:left;font-size:18px;font-weight:700;height:46px">${y}年${m}月 ▾</button><button type="button" id="dpp" style="${B};width:56px">‹</button><button type="button" id="dpn" style="${B};width:56px">›</button></div>
+   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">${WD.map((w,i)=>`<div class="note" style="color:${i===0?"#d33":i===6?"#27c":""}">${w}</div>`).join("")}`;
+   for(let i=0;i<first;i++)h+="<div></div>";
+   for(let d=1;d<=last;d++){const v=iso(y,m,d),sel=v===inp.value;h+=`<button type="button" data-d="${v}" style="${B};${sel?"background:var(--ac);color:#fff;border-color:var(--ac);":v===td?"border-color:var(--ac);":""}">${d}</button>`}
+   h+=`</div><div style="display:flex;gap:8px;margin-top:12px"><button type="button" id="dpc" style="height:44px">クリア</button><button type="button" id="dpt" style="height:44px">今日</button><span style="flex:1"></span><button type="button" id="dpx" style="height:44px">閉じる</button></div>`;
+  }else{
+   h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><button type="button" id="dyp" style="${B};width:64px">‹</button><b style="flex:1;text-align:center;font-size:20px">${y}年</b><button type="button" id="dyn" style="${B};width:64px">›</button></div>
+   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${Array.from({length:12},(_,i)=>`<button type="button" data-m="${i+1}" style="${B};height:56px;${i+1===m?"background:var(--ac);color:#fff;border-color:var(--ac);":""}">${i+1}月</button>`).join("")}</div>
+   <div class="note" style="margin-top:10px">月をタップすると日にちの画面に戻ります</div>`;
+  }
+  box.innerHTML=h+"</div>";
+  const $q=q=>box.querySelector(q);
+  box.onclick=e=>{if(e.target===box)closeDp()};
+  box.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>pick(b.dataset.d));
+  box.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{m=+b.dataset.m;mode="d";draw()});
+  const on=(id,f)=>{const x=$q("#"+id);if(x)x.onclick=f};
+  on("dpym",()=>{mode="y";draw()});on("dpp",()=>{m--;if(m<1){m=12;y--}draw()});on("dpn",()=>{m++;if(m>12){m=1;y++}draw()});
+  on("dyp",()=>{y--;draw()});on("dyn",()=>{y++;draw()});
+  on("dpc",()=>pick(""));on("dpt",()=>pick(td));on("dpx",closeDp);
+ }
+ draw();document.body.appendChild(box);
+}
+document.addEventListener("click",e=>{const t=e.target;if(t&&t.matches&&t.matches("input[data-dp]")){e.preventDefault();t.blur();openDp(t)}},true);
+
+/* 入力候補: 数文字打つと、過去の入力から一致するものを縦に出す */
+const split=v=>String(v||"").split(/[、,]/).map(x=>x.trim()).filter(Boolean);
+const srcOf=k=>{const tr=(typeof trSorted==="function"?trSorted():[]),o=[],add=v=>{if(v&&!o.includes(v))o.push(v)};
+ tr.forEach(t=>{if(k==="reel"||k==="rod")add(t.tk&&t.tk[k]);else if(k==="lure")split(t.tk&&t.tk.lure).forEach(add);else if(k==="fo")split(t.other).forEach(add);else if(k==="fp")add(t.place)});return o};
+document.addEventListener("input",e=>{const t=e.target;if(!t||!t.matches||!t.closest("#v-trip"))return;
+ const k=t.dataset&&t.dataset.t&&["reel","rod","lure"].includes(t.dataset.t)?t.dataset.t:(t.id==="fo"||t.id==="fp"?t.id:null);if(!k)return;
+ document.querySelectorAll(".sgbox").forEach(x=>x.remove());
+ const seg=(k==="lure"||k==="fo"),val=t.value,parts=seg?val.split(/[、,]/):[val],q=(parts[parts.length-1]||"").trim().toLowerCase();if(!q)return;
+ const used=seg?split(val.slice(0,val.length-(parts[parts.length-1]||"").length)):[];
+ const m=srcOf(k).filter(v=>v.toLowerCase().includes(q)&&v.toLowerCase()!==q&&!used.includes(v)).slice(0,5);if(!m.length)return;
+ const b=document.createElement("div");b.className="sgbox";b.style.cssText="display:flex;flex-direction:column;gap:4px;margin:2px 0 8px";
+ b.innerHTML=m.map(v=>`<button type="button" style="text-align:left">${esc(v)}</button>`).join("");
+ b.querySelectorAll("button").forEach((x,i)=>x.onclick=()=>{const v=m[i];t.value=seg?(parts.slice(0,-1).map(s=>s.trim()).filter(Boolean).concat(v)).join("、"):v;
+  t.dispatchEvent(new Event("input",{bubbles:true}));b.remove();t.focus()});
+ (t.closest("label")||t).insertAdjacentElement("afterend",b)},true);
+document.addEventListener("focusout",e=>{const t=e.target;if(t&&t.closest&&t.closest("#v-trip"))setTimeout(()=>{const a=document.activeElement;if(!(a&&a.closest&&a.closest(".sgbox")))document.querySelectorAll(".sgbox").forEach(x=>{if(!x.contains(document.activeElement))x.remove()})},350)},true);
+})();
 </script>
 </body>
 </html>
