@@ -283,7 +283,7 @@ function wx(){
   <div class="note" style="margin:4px 0">雨量の合計: 一昨日 <b>${pr(ds.time[0])}</b> / 昨日 <b>${pr(ds.time[1])}</b> / 今日 <b>${pr(td)}</b> / 明日 <b>${pr(ds.time[3])}</b> mm</div>
   <div class="row"><button class="${wxMode==="h"?"pri":""}" id="wmh">1時間ごと(48時間前から)</button><button class="${wxMode==="d"?"pri":""}" id="wmd">日ごとの記録</button></div>
   <div class="tb">${body}</div>${tnD?TNNOTE:""}</div></div>`}
- $("#v-wx").innerHTML=`<div id="wxm" class="${sh?"op":""}"><svg viewBox="${!wxNew?`-90 -10 ${W+190} ${H+20}`:wxSouth?"-75 420 290 215":`${-90-(W+190)*.05} ${-10-(H+20)*.05} ${(W+190)*1.1} ${(H+20)*1.1}`}" style="background:var(--sml);border-radius:12px">${g}</svg>
+ $("#v-wx").innerHTML=`<div id="wxm" class="${sh?"op":""}"><svg viewBox="${!wxNew?`-90 -10 ${W+190} ${H+20}`:wxSouth?`-75 ${(505-145*(H+20)/(W+190)).toFixed(1)} 290 ${(290*(H+20)/(W+190)).toFixed(1)}`:`${-90-(W+190)*.05} ${-10-(H+20)*.05} ${(W+190)*1.1} ${(H+20)*1.1}`}" style="background:var(--sml);border-radius:12px">${g}</svg>
   <div class="row" style="margin-top:8px"><button id="wnow">いま</button><button id="wm">−1時間</button><input type="range" id="wsl" min="0" max="${N-1}" value="${K}" style="flex:1;min-width:120px"><button id="wp">+1時間</button></div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b id="wlab">${wxLab(K)}</b><button id="wwv" class="${wxOn?"pri":""}">荒れの目安 ${wxOn?"表示中":"非表示"}</button><button id="wrn" class="${rnOn?"pri":""}">雨雲 ${rnOn?"表示中":"非表示"}</button>${wxNew?`<button id="wsb" class="${wxSouth?"pri":""}">${wxSouth?"全体に戻す":"南湖拡大"}</button>`:""}<button id="wmv">表示: ${wxNew?"見やすい":"従来"}</button></div>
   ${rnCtl()}
