@@ -578,13 +578,16 @@ const cleanTk=k=>{k=k||{};const o={};["reel","rod","lt","ls","ld","lds","lure"].
 const szTxt=z=>[z.len?z.len+"cm":"",z.w?z.w+z.wu:""].filter(Boolean).join(" ");
 const maxLen=f=>{const m=(f.sz||[]).map(z=>parseFloat(z.len)).filter(x=>x>0);return m.length?Math.max(...m):0};
 const fishSum=t=>(t.fish||[]).map(f=>esc(f.sp)+" "+f.n+"本"+(maxLen(f)?"(最大"+maxLen(f)+"cm)":"")).join("、");
+const trSorted=()=>trips.slice().sort((a,b)=>(b.date+b.id).localeCompare(a.date+a.id));
+const recent5=f=>{const o=[];for(const t of trSorted()){for(const v of f(t)){if(v&&!o.includes(v))o.push(v);if(o.length>=5)return o}}return o};
+const recBox=(key,arr)=>arr.length?`<div class="note" style="margin-top:2px">最近の入力(タップで入れる)</div><div style="display:flex;flex-direction:column;gap:4px;margin:2px 0 8px">${arr.map(v=>`<button type="button" data-rk="${key}" data-rv="${esc(v)}" style="text-align:left">${esc(v)}</button>`).join("")}</div>`:"";
 const tkHist=k=>[...new Set(trips.map(t=>t.tk&&t.tk[k]).filter(Boolean))];
 function fishBlock(){return tf.fish.map((f,i)=>`<div class="card" style="margin:8px 0;padding:10px"><div class="row" style="align-items:flex-end"><label>魚種<input data-k="sp" data-i="${i}" list="spl" value="${esc(f.sp)}" placeholder="例: オオクチバス"></label><label style="max-width:84px">本数<input data-k="n" data-i="${i}" type="number" min="1" max="30" inputmode="numeric" value="${f.n}"></label><button data-del="${i}">削除</button></div>
  ${f.n>1?`<div class="row"><button class="pl ${f.mode==="max"?"":"pri"}" data-md="each" data-i="${i}">全部入力</button><button class="pl ${f.mode==="max"?"pri":""}" data-md="max" data-i="${i}">最大のみ</button></div>`:""}
  ${f.sz.map((z,j)=>`<div class="row" style="align-items:flex-end"><span style="min-width:40px">${f.n<=1?"サイズ":f.mode==="max"?"最大":"#"+(j+1)}</span><label>長さ(cm)<input data-k="len" data-i="${i}" data-j="${j}" type="number" step="0.5" inputmode="decimal" value="${esc(z.len)}"></label><label>重さ<input data-k="w" data-i="${i}" data-j="${j}" type="number" step="any" inputmode="decimal" value="${esc(z.w)}"></label><label style="max-width:76px">単位<select data-k="wu" data-i="${i}" data-j="${j}">${["g","kg","oz"].map(u=>`<option ${z.wu===u?"selected":""}>${u}</option>`).join("")}</select></label></div>`).join("")}</div>`).join("")+`<div class="row"><button id="fadd">＋ 魚種を追加</button></div>`}
 function tackleBlock(){const k=tf.tk,I=(key,lab,ph,lst)=>`<div class="row"><label>${lab}<input data-t="${key}" ${lst?`list="${lst}"`:""} value="${esc(k[key]||"")}" placeholder="${ph||""}"></label></div>`;
  const B=(attr,v,cur)=>`<button class="pl ${cur===v?"pri":""}" data-${attr}="${v}">${v}</button>`;
- return I("reel","リール","例: ステラ C3000","dlr")+I("rod","ロッド","例: ○○ 6.8ft","dld")+`<div class="note">ライン</div><div class="row">${["ナイロン","フロロ","PE"].map(v=>B("lt",v,k.lt)).join("")}<label style="max-width:150px"><input data-t="ls" value="${esc(k.ls||"")}" placeholder="号数・lb"></label></div>`
+ return I("reel","リール","例: ステラ C3000","dlr")+recBox("reel",recent5(t=>[t.tk&&t.tk.reel]))+I("rod","ロッド","例: ○○ 6.8ft","dld")+recBox("rod",recent5(t=>[t.tk&&t.tk.rod]))+`<div class="note">ライン</div><div class="row">${["ナイロン","フロロ","PE"].map(v=>B("lt",v,k.lt)).join("")}<label style="max-width:150px"><input data-t="ls" value="${esc(k.ls||"")}" placeholder="号数・lb"></label></div>`
  +(k.lt==="PE"?`<div class="note">リーダー</div><div class="row">${["フロロ","ナイロン"].map(v=>B("ld",v,k.ld)).join("")}<label style="max-width:150px"><input data-t="lds" value="${esc(k.lds||"")}" placeholder="号数・lb"></label></div>`:"")+I("lure","ルアー(複数は「、」で区切る)","例: ポップアップジグ 40g","dll")}
 function formExtra(el){
  const fb=$("#ffish"),tb=$("#ftk"),rf=()=>{fb.innerHTML=fishBlock()},rt=()=>{tb.innerHTML=tackleBlock()};rf();rt();
@@ -597,6 +600,7 @@ function formExtra(el){
   else if(b.id==="fadd"){tf.fish.push(newFish());rf()}};
  tb.oninput=e=>{const k=e.target.dataset.t;if(k)tf.tk[k]=e.target.value};
  tb.onclick=e=>{const b=e.target.closest&&e.target.closest("button");if(!b)return;
+  if(b.dataset.rk){tf.tk[b.dataset.rk]=b.dataset.rv;rt();return}
   if(b.dataset.lt){tf.tk.lt=tf.tk.lt===b.dataset.lt?"":b.dataset.lt;if(tf.tk.lt!=="PE"){tf.tk.ld="";tf.tk.lds=""}rt()}
   else if(b.dataset.ld){tf.tk.ld=tf.tk.ld===b.dataset.ld?"":b.dataset.ld;rt()}};
  photoUI(tf,"#fph",false)}
@@ -645,23 +649,23 @@ function trip(){
   <div class="row"><button class="pl ${ot?"":"pri"}" data-a="bw">琵琶湖</button><button class="pl ${ot?"pri":""}" data-a="other">その他</button></div>
   <div id="fbw" ${ot?"hidden":""}><div class="note">行った場所(複数選べます)</div>
   <div class="row">${WXP.map(p=>`<button class="pl" data-s="${esc(p[0])}" style="border-color:var(--ac);${t.spots.includes(p[0])?"background:var(--ac);color:#fff":""}">${esc(p[0])}</button>`).join("")}</div>
-  <div class="row"><label>琵琶湖のその他の場所(自由入力。「、」で区切る)<input id="fo" value="${esc(t.other||"")}"></label></div></div>
-  <div id="fot" ${ot?"":"hidden"}><div class="row"><label>場所(手入力)<input id="fp" value="${esc(t.place||"")}" placeholder="例: 大阪湾、紀の川"></label></div></div>
+  <div class="row"><label>琵琶湖のその他の場所(自由入力。「、」で区切る)<input id="fo" value="${esc(t.other||"")}"></label></div>${recBox("fo",recent5(x=>(x.other||"").split(/[、,]/).map(y=>y.trim())))}</div>
+  <div id="fot" ${ot?"":"hidden"}><div class="row"><label>場所(手入力)<input id="fp" value="${esc(t.place||"")}" placeholder="例: 大阪湾、紀の川"></label></div>${recBox("fp",recent5(x=>[x.place]))}</div>
   <div class="note">釣行時間</div><div class="row"><label>開始<input id="ft1" type="time" value="${esc(t.tm.a||"")}"></label><label>終了<input id="ft2" type="time" value="${esc(t.tm.b||"")}"></label></div>
   <div class="note">釣果</div><div id="ffish"></div>
   <div class="note">タックル</div><div id="ftk"></div>
   <datalist id="spl">${[...new Set(SPL.concat(trips.flatMap(x=>(x.fish||[]).map(f=>f.sp))))].map(v=>`<option value="${esc(v)}">`).join("")}</datalist><datalist id="dlr">${tkHist("reel").map(v=>`<option value="${esc(v)}">`).join("")}</datalist><datalist id="dld">${tkHist("rod").map(v=>`<option value="${esc(v)}">`).join("")}</datalist><datalist id="dll">${tkHist("lure").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
   <div class="note">写真</div><div id="fph"></div>
-  <div class="row"><label>釣果ひとこと(任意)<input id="fc" value="${esc(t.catch||"")}"></label></div>
   <label class="lbl">メモ(任意)<textarea id="fm" rows="3">${esc(t.memo||"")}</textarea></label>
   <div class="row"><button class="pri" id="fs">保存</button><button id="fx">キャンセル</button></div></div>`;
   el.querySelectorAll("button[data-s]").forEach(b=>b.onclick=()=>{const s=b.dataset.s,i=tf.spots.indexOf(s);if(i<0)tf.spots.push(s);else tf.spots.splice(i,1);const on=tf.spots.includes(s);b.style.background=on?"var(--ac)":"";b.style.color=on?"#fff":""});
   el.querySelectorAll("button[data-a]").forEach(b=>b.onclick=()=>{tf.area=b.dataset.a;const o=tf.area==="other";$("#fbw").hidden=o;$("#fot").hidden=!o;el.querySelectorAll("button[data-a]").forEach(x=>x.classList.toggle("pri",x.dataset.a===tf.area))});
+  el.querySelectorAll("button[data-rk=fo],button[data-rk=fp]").forEach(b=>b.onclick=()=>{const i=$("#"+b.dataset.rk),v=b.dataset.rv;if(b.dataset.rk==="fp")i.value=v;else{const a=(i.value||"").split(/[、,]/).map(x=>x.trim()).filter(Boolean);if(!a.includes(v))a.push(v);i.value=a.join("、")}});
   formExtra(el);
   $("#fx").onclick=()=>{tripEdit=null;trip()};
   $("#fs").onclick=()=>{const date=$("#fd").value;if(!date)return;let end=$("#fe").value||"";if(end<=date)end="";
    const o2=tf.area==="other",oth=($("#fo").value||"").split(/[、,]/).map(x=>x.trim()).filter(Boolean),sp=o2?[]:[...new Set(tf.spots.concat(oth))];
-   const o={id:tf.id||Date.now().toString(36),date,end,area:o2?"other":"bw",place:o2?($("#fp").value||"").trim():"",spots:sp,catch:$("#fc").value.trim(),memo:$("#fm").value.trim(),photos:tf.photos||[],fish:cleanFish(tf.fish),tk:cleanTk(tf.tk),tm:{a:tf.tm.a||"",b:tf.tm.b||""}};
+   const o={id:tf.id||Date.now().toString(36),date,end,area:o2?"other":"bw",place:o2?($("#fp").value||"").trim():"",spots:sp,catch:tf.catch||"",memo:$("#fm").value.trim(),photos:tf.photos||[],fish:cleanFish(tf.fish),tk:cleanTk(tf.tk),tm:{a:tf.tm.a||"",b:tf.tm.b||""}};
    const i=trips.findIndex(x=>x.id===o.id);if(i<0)trips.push(o);else trips[i]=o;saveTrips();tripEdit=null;tripSel=o.id;tv=null;trip()};
   return}
  if(tripSel){const t=trips.find(x=>x.id===tripSel);if(!t){tripSel=null;return trip()}
