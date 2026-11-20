@@ -660,7 +660,8 @@ function trip(){
   <div class="note">釣り場</div>
   <div class="row"><button class="pl ${ot?"":"pri"}" data-a="bw">琵琶湖</button><button class="pl ${ot?"pri":""}" data-a="other">その他</button></div>
   <div id="fbw" ${ot?"hidden":""}><div class="note">行った場所(複数選べます)</div>
-  <div class="row">${WXP.map(p=>`<button class="pl" data-s="${esc(p[0])}" style="border-color:var(--ac);${t.spots.includes(p[0])?"background:var(--ac);color:#fff":""}">${esc(p[0])}</button>`).join("")}</div>
+  <div class="row"><button type="button" id="fspb" style="width:100%;text-align:left">${t.spots.length?esc(t.spots.join("、")):"タップして選ぶ"} ▾</button></div>
+  <div class="row" id="fspr" hidden>${WXP.map(p=>`<button class="pl" data-s="${esc(p[0])}" style="border-color:var(--ac);${t.spots.includes(p[0])?"background:var(--ac);color:#fff":""}">${esc(p[0])}</button>`).join("")}</div>
   <div class="row"><label>琵琶湖のその他の場所(自由入力。「、」で区切る)<input id="fo" value="${esc(t.other||"")}"></label></div>${recBox("fo",recent5(x=>(x.other||"").split(/[、,]/).map(y=>y.trim())))}</div>
   <div id="fot" ${ot?"":"hidden"}><div class="row"><label>場所(手入力)<input id="fp" value="${esc(t.place||"")}" placeholder="例: 大阪湾、紀の川"></label></div>${recBox("fp",recent5(x=>[x.place]))}</div>
   <div class="note">釣行時間</div><div class="row"><label>開始<input id="ft1" type="time" value="${esc(t.tm.a||"")}"></label><label>終了<input id="ft2" type="time" value="${esc(t.tm.b||"")}"></label></div>
@@ -670,7 +671,8 @@ function trip(){
   <div class="note">写真</div><div id="fph"></div>
   <label class="lbl">メモ(任意)<textarea id="fm" rows="3">${esc(t.memo||"")}</textarea></label>
   <div class="row"><button class="pri" id="fs">保存</button><button id="fx">キャンセル</button></div></div>`;
-  el.querySelectorAll("button[data-s]").forEach(b=>b.onclick=()=>{const s=b.dataset.s,i=tf.spots.indexOf(s);if(i<0)tf.spots.push(s);else tf.spots.splice(i,1);const on=tf.spots.includes(s);b.style.background=on?"var(--ac)":"";b.style.color=on?"#fff":""});
+  el.querySelectorAll("button[data-s]").forEach(b=>b.onclick=()=>{const s=b.dataset.s,i=tf.spots.indexOf(s);if(i<0)tf.spots.push(s);else tf.spots.splice(i,1);const on=tf.spots.includes(s);b.style.background=on?"var(--ac)":"";b.style.color=on?"#fff":"";$("#fspb").textContent=(tf.spots.length?tf.spots.join("、"):"タップして選ぶ")+" ▾"});
+  $("#fspb").onclick=()=>{$("#fspr").hidden=!$("#fspr").hidden};
   el.querySelectorAll("button[data-a]").forEach(b=>b.onclick=()=>{tf.area=b.dataset.a;const o=tf.area==="other";$("#fbw").hidden=o;$("#fot").hidden=!o;el.querySelectorAll("button[data-a]").forEach(x=>x.classList.toggle("pri",x.dataset.a===tf.area))});
   el.querySelectorAll("button[data-rk=fo],button[data-rk=fp]").forEach(b=>b.onclick=()=>{const i=$("#"+b.dataset.rk),v=b.dataset.rv;if(b.dataset.rk==="fp")i.value=v;else{const a=(i.value||"").split(/[、,]/).map(x=>x.trim()).filter(Boolean);if(!a.includes(v))a.push(v);i.value=a.join("、")}b.closest(".rcb").style.display="none"});
   formExtra(el);
