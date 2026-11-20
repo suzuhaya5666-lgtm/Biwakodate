@@ -640,6 +640,18 @@ function catchCard(){
  const cs=sp.map(k=>{const t=avg(S[k].c,"tp"),d=avg(S[k].c,"dl");return t||d?`<div style="margin:3px 0"><b>${esc(k)}</b>　${t?"水温 平均"+t.v.toFixed(1)+"℃":""}${t&&d?"・":""}${d?"水位 平年比"+(d.v>=0?"+":"")+d.v.toFixed(0)+"cm":""}<span class="note">(${(t||d).d}日分)</span></div>`:""}).join("");
  h+=cs||'<p class="note">データが足りません。水温・水位のある日の釣果が3日分たまると表示されます。</p>';
  return h+`<p class="note">本数で重みをつけた平均です。水温は観測地点の平均、水位は直近10年の平年との差です。</p></div>`}
+const tgO={y:new Set(),m:new Set(),init:false};
+function tripRow(t){const bw=isBw(t),g=bw?dayAgg(tripPlaces(t)[0],t.date):null;
+   return`<div class="trow" data-id="${t.id}">${t.photos&&t.photos[0]&&thumbs[t.photos[0]]?`<img src="${thumbs[t.photos[0]]}" style="float:right;width:56px;height:56px;object-fit:cover;border-radius:8px;margin-left:8px">`:""}<b>${rangeLabel(t)}</b> ${t.date.slice(0,4)}　${tideOf(t.date)}<br>📍 ${spotLabel(t)}
+   <div class="note">${bw?(g.code==null?"天気データなし":`${WXE(g.code)} ${WXN(g.code)}・雨${f1(g.precip)}mm・${g.dir==null?"":dirN(g.dir)+" "}最大${f1(g.wmax)}m/s`):""}${fishSum(t)?"　🐟 "+fishSum(t):""}${t.catch?"　🎣 "+esc(t.catch):""}</div></div>`}
+function tripGroups(L){
+ if(!tgO.init){tgO.init=true;if(L[0]){tgO.y.add(L[0].date.slice(0,4));tgO.m.add(L[0].date.slice(0,7))}}
+ const Y={};L.forEach(t=>{const y=t.date.slice(0,4),m=t.date.slice(0,7);((Y[y]=Y[y]||{})[m]=Y[y][m]||[]).push(t)});
+ const H="width:100%;text-align:left;display:flex;align-items:center;gap:8px;";
+ return Object.keys(Y).sort().reverse().map(y=>{const ms=Y[y],n=Object.values(ms).reduce((a,v)=>a+v.length,0),oy=tgO.y.has(y);
+  return`<div style="margin:6px 0"><button type="button" data-ty="${y}" style="${H}font-size:17px;font-weight:700;padding:12px 12px"><span>${oy?"▼":"▶"}</span><span style="flex:1">${y}年</span><span class="note">${n}件</span></button>`+
+   (oy?`<div style="padding-left:8px">`+Object.keys(ms).sort().reverse().map(m=>{const om=tgO.m.has(m),mm=+m.slice(5);
+    return`<button type="button" data-tm="${m}" style="${H}margin-top:6px;padding:10px 12px"><span>${om?"▼":"▶"}</span><span style="flex:1">${mm}月</span><span class="note">${ms[m].length}件</span></button>`+(om?ms[m].map(tripRow).join(""):"")}).join("")+`</div>`:"")+`</div>`}).join("")}
 function trip(){
  const el=$("#v-trip");
  if(tripEdit!==null){const t=tf,ot=t.area==="other";tf.fish=Array.isArray(tf.fish)?tf.fish:[];tf.tk=tf.tk||{};tf.tm=tf.tm||{};tf.photos=tf.photos||[];tf.fish.forEach(fixFish);
@@ -702,13 +714,13 @@ function trip(){
  el.innerHTML=`<div class="card"><div class="row"><b style="flex:1;font-size:17px">釣行の記録</b><button class="pri" id="tn">＋ 追加</button></div>
   <p class="note">記録はこの端末に保存し、Googleドライブにも自動でバックアップします(ログイン中のみ。下で状態を確認できます)。</p>
   ${ST.length?`<div class="lbl">年間の釣行日数</div>`+ST.map(x=>`<div style="margin:2px 0"><b>${x.y}年</b>　<b style="font-size:18px">${x.all}</b>日　<span class="note">釣行${x.n}回(琵琶湖 ${x.bw}日・その他 ${x.ot}日)</span></div>`).join("")+`<div style="height:6px"></div>`:""}
-  ${L.length?L.map(t=>{const bw=isBw(t),g=bw?dayAgg(tripPlaces(t)[0],t.date):null;
-   return`<div class="trow" data-id="${t.id}">${t.photos&&t.photos[0]&&thumbs[t.photos[0]]?`<img src="${thumbs[t.photos[0]]}" style="float:right;width:56px;height:56px;object-fit:cover;border-radius:8px;margin-left:8px">`:""}<b>${rangeLabel(t)}</b> ${t.date.slice(0,4)}　${tideOf(t.date)}<br>📍 ${spotLabel(t)}
-   <div class="note">${bw?(g.code==null?"天気データなし":`${WXE(g.code)} ${WXN(g.code)}・雨${f1(g.precip)}mm・${g.dir==null?"":dirN(g.dir)+" "}最大${f1(g.wmax)}m/s`):""}${fishSum(t)?"　🐟 "+fishSum(t):""}${t.catch?"　🎣 "+esc(t.catch):""}</div></div>`}).join(""):'<p class="note">まだ記録がありません。「＋ 追加」から登録できます。</p>'}</div>
+  ${L.length?tripGroups(L):'<p class="note">まだ記録がありません。「＋ 追加」から登録できます。</p>'}</div>
   ${(()=>{try{return catchCard()}catch(e){return""}})()}<div class="card"><b>バックアップ</b>${bkCard()}<p class="note" style="margin-top:10px">文字として書き出し・読み込みもできます。書き出した文字は、メモアプリなどにも保存しておくと安心です。</p>
   <div class="row"><button id="xb">書き出す</button><button id="ib">読み込む</button></div><textarea id="xt" rows="5"></textarea><div class="row"><button id="xo" class="pri" hidden>取り込む</button></div></div>`;
  $("#tn").onclick=()=>{tf={id:"",date:nowStr().slice(0,10),end:"",area:"bw",place:"",spots:[],other:"",catch:"",memo:""};tripEdit="new";trip()};
  el.querySelectorAll(".trow").forEach(e=>e.onclick=()=>{tripSel=e.dataset.id;tv=null;trip();scrollTo(0,0)});
+ el.querySelectorAll("button[data-ty]").forEach(b=>b.onclick=()=>{const k=b.dataset.ty;tgO.y.has(k)?tgO.y.delete(k):tgO.y.add(k);const y=scrollY;trip();scrollTo(0,y)});
+ el.querySelectorAll("button[data-tm]").forEach(b=>b.onclick=()=>{const k=b.dataset.tm;tgO.m.has(k)?tgO.m.delete(k):tgO.m.add(k);const y=scrollY;trip();scrollTo(0,y)});
  $("#bkn").onclick=()=>bkRun(true);$("#bkr").onclick=bkRestore;
  const xt=$("#xt");
  $("#xb").onclick=()=>{xt.value=JSON.stringify(trips);$("#xo").hidden=true;xt.select()};
