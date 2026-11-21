@@ -636,10 +636,8 @@ function catchCard(){
  +sp.map(k=>{const o=S[k];return`<tr><td>${esc(k)}</td><td class="n">${o.n}</td><td class="n">${o.d.size}</td><td>${o.ml?o.ml+"cm":""}${o.ml&&o.mw?" / ":""}${o.mw?wt(o.mw):""}${!o.ml&&!o.mw?"–":""}</td></tr>`}).join("")+`</table>
  <div class="lbl" style="margin-top:8px">月別の本数</div>`
  +M.map((v,i)=>v?`<div style="display:flex;align-items:center;gap:6px;margin:1px 0"><span style="width:34px">${i+1}月</span><span style="height:10px;border-radius:5px;background:var(--ac);width:${Math.max(4,v/mx*60)}%"></span><span class="note">${v}</span></div>`:"").join("")
- +`<div class="lbl" style="margin-top:8px">釣れた日の条件(琵琶湖の釣行のみ)</div>`;
- const cs=sp.map(k=>{const t=avg(S[k].c,"tp"),d=avg(S[k].c,"dl");return t||d?`<div style="margin:3px 0"><b>${esc(k)}</b>　${t?"水温 平均"+t.v.toFixed(1)+"℃":""}${t&&d?"・":""}${d?"水位 平年比"+(d.v>=0?"+":"")+d.v.toFixed(0)+"cm":""}<span class="note">(${(t||d).d}日分)</span></div>`:""}).join("");
- h+=cs||'<p class="note">データが足りません。水温・水位のある日の釣果が3日分たまると表示されます。</p>';
- return h+`<p class="note">本数で重みをつけた平均です。水温は観測地点の平均、水位は直近10年の平年との差です。</p></div>`}
+ ;
+ return h+`</div>`}
 const tgO={y:new Set(),m:new Set(),init:false};
 function tripRow(t){const bw=isBw(t),g=bw?dayAgg(tripPlaces(t)[0],t.date):null;
    return`<div class="trow" data-id="${t.id}">${t.photos&&t.photos[0]&&thumbs[t.photos[0]]?`<img src="${thumbs[t.photos[0]]}" style="float:right;width:56px;height:56px;object-fit:cover;border-radius:8px;margin-left:8px">`:""}<b>${rangeLabel(t)}</b> ${t.date.slice(0,4)}　${tideOf(t.date)}<br>📍 ${spotLabel(t)}
