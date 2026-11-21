@@ -621,14 +621,15 @@ function yearStats(){const Y={};
  trips.forEach(t=>{const y=t.date.slice(0,4),o=(Y[y]=Y[y]||{n:0,all:new Set(),bw:new Set(),ot:new Set()});o.n++;});
  trips.forEach(t=>tDays(t).forEach(d=>{const o=(Y[d.slice(0,4)]=Y[d.slice(0,4)]||{n:0,all:new Set(),bw:new Set(),ot:new Set()});o.all.add(d);(isBw(t)?o.bw:o.ot).add(d)}));
  return Object.keys(Y).sort().reverse().map(y=>({y,n:Y[y].n,all:Y[y].all.size,bw:Y[y].bw.size,ot:Y[y].ot.size}))}
-const cr={k:"all",s:"",e:""};
+const cr={k:"all",s:"",e:"",sp:""};
 function crList(){const y=new Date().getFullYear();let a="0000-01-01",b="9999-12-31";if(cr.k==="y"){a=y+"-01-01";b=y+"-12-31"}else if(cr.k==="p"){a=(y-1)+"-01-01";b=(y-1)+"-12-31"}else if(cr.k==="c"){if(cr.s)a=cr.s;if(cr.e)b=cr.e}return trips.filter(t=>t.date>=a&&t.date<=b)}
 function crCtl(){const y=new Date().getFullYear(),B=(k,l)=>`<button type="button" data-cr="${k}" class="${cr.k===k?"pri":""}">${l}</button>`;
- return`<div class="lbl">期間</div><div class="row" style="flex-wrap:wrap;gap:6px">${B("all","全期間")}${B("y",y+"年")}${B("p",(y-1)+"年")}${B("c","期間指定")}</div>`+(cr.k==="c"?`<div class="row"><label>開始日<input id="crs" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ" value="${cr.s}"></label><label>終了日<input id="cre" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ" value="${cr.e}"></label></div>`:"")}
+ return`<div class="lbl">期間</div><div class="row" style="flex-wrap:wrap;gap:6px">${B("all","全期間")}${B("y",y+"年")}${B("p",(y-1)+"年")}${B("c","期間指定")}</div>`+(()=>{const c={};trips.forEach(t=>(t.fish||[]).forEach(f=>{c[f.sp]=(c[f.sp]||0)+f.n}));const l=Object.keys(c).sort((a,b)=>c[b]-c[a]);if(l.length<2)return"";
+  return`<div class="lbl" style="margin-top:6px">魚種</div><div class="row" style="flex-wrap:wrap;gap:6px"><button type="button" data-cs="" class="${cr.sp?"":"pri"}">全魚種</button>${l.map(k=>`<button type="button" data-cs="${esc(k)}" class="${cr.sp===k?"pri":""}">${esc(k)}</button>`).join("")}</div>`})()+(cr.k==="c"?`<div class="row"><label>開始日<input id="crs" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ" value="${cr.s}"></label><label>終了日<input id="cre" type="text" readonly inputmode="none" data-dp="1" placeholder="日付を選ぶ" value="${cr.e}"></label></div>`:"")}
 function catchCard(){
  const W=z=>{const v=parseFloat(z.w);if(!(v>0))return 0;return z.wu==="kg"?v*1000:z.wu==="oz"?v*28.35:v};
  const S={},M=Array(12).fill(0),rs=all();let tot=0,td=new Set();
- crList().forEach(t=>(t.fish||[]).forEach(f=>{const o=(S[f.sp]=S[f.sp]||{n:0,d:new Set(),ml:0,mw:0,mlD:"",mwD:"",c:[]});o.n+=f.n;o.d.add(t.date);tot+=f.n;td.add(t.date);M[+t.date.slice(5,7)-1]+=f.n;
+ crList().forEach(t=>(t.fish||[]).forEach(f=>{if(cr.sp&&f.sp!==cr.sp)return;const o=(S[f.sp]=S[f.sp]||{n:0,d:new Set(),ml:0,mw:0,mlD:"",mwD:"",c:[]});o.n+=f.n;o.d.add(t.date);tot+=f.n;td.add(t.date);M[+t.date.slice(5,7)-1]+=f.n;
   (f.sz||[]).forEach(z=>{const l=parseFloat(z.len)||0,w=W(z);if(l>o.ml){o.ml=l;o.mlD=t.date}if(w>o.mw){o.mw=w;o.mwD=t.date}});
   if(isBw(t)){const tp=dayAvg(rs,"temp",t.date),lv=dayAvg(rs,"level",t.date,"琵琶湖(平均)")??dayAvg(rs,"level",t.date,"雄琴沖"),cl=lclimAt(new Date(t.date+"T12:00").getTime(),"r10");
    o.c.push({n:f.n,tp,dl:lv!=null&&cl?(lv-cl.m)*100:null})}}));
@@ -724,6 +725,7 @@ function trip(){
   <div class="row"><button id="xb">書き出す</button><button id="ib">読み込む</button></div><textarea id="xt" rows="5"></textarea><div class="row"><button id="xo" class="pri" hidden>取り込む</button></div></div>`;
  $("#tn").onclick=()=>{tf={id:"",date:nowStr().slice(0,10),end:"",area:"bw",place:"",spots:[],other:"",catch:"",memo:""};tripEdit="new";trip()};
  el.querySelectorAll(".trow").forEach(e=>e.onclick=()=>{tripSel=e.dataset.id;tv=null;trip();scrollTo(0,0)});
+ el.querySelectorAll("button[data-cs]").forEach(b=>b.onclick=()=>{cr.sp=b.dataset.cs;const y=scrollY;trip();scrollTo(0,y)});
  el.querySelectorAll("button[data-cr]").forEach(b=>b.onclick=()=>{cr.k=b.dataset.cr;const y=scrollY;trip();scrollTo(0,y)});
  ["crs","cre"].forEach(id=>{const i=$("#"+id);if(i)i.onchange=()=>{cr[id==="crs"?"s":"e"]=i.value;const y=scrollY;trip();scrollTo(0,y)}});
  el.querySelectorAll("button[data-ty]").forEach(b=>b.onclick=()=>{const k=b.dataset.ty;tgO.y.has(k)?tgO.y.delete(k):tgO.y.add(k);const y=scrollY;trip();scrollTo(0,y)});
