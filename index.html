@@ -328,7 +328,7 @@ function spawnCard(rs,at){at=at||new Date();const ds=at.getFullYear()+"-"+pad(at
 const POSTURL="https://biwafishing.github.io/biwako-opendata/";
 function postCard(){return `<div class="card"><b>X投稿文をつくる</b><p class="note">押すと、最新の数字から投稿文ができます。コピーしてXに貼ってください。</p>
  <div class="row"><button id="pt1" class="pri">今朝の水温・水位</button><button id="pt2" class="pri">週末の予報</button></div>
- <textarea id="ptx" rows="9" placeholder="ここに投稿文が出ます"></textarea><div class="row"><button id="ptc">コピー</button></div></div>`}
+ <textarea id="ptx" rows="9" placeholder="ここに投稿文が出ます"></textarea><div class="note" id="ptn"></div><div class="row"><button id="ptc">コピー</button></div></div>`}
 function postTemp(){const rs=all(),H=36e5,sg=x=>(x>0?"+":x<0?"-":"±")+Math.abs(x).toFixed(1),d=new Date(),L=[];
  const by=m=>{const o={};rs.filter(r=>r[m]!=null).forEach(r=>(o[r.place]=o[r.place]||[]).push(r));return o};
  const lt=q=>q.reduce((x,r)=>r.time>x.time?r:x);
@@ -344,15 +344,17 @@ async function postWeek(){const nm=["塩津","彦根","琵琶湖大橋","プリ�
  const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
  const url="https://api.open-meteo.com/v1/forecast?latitude="+P.map(p=>p[1]).join(",")+"&longitude="+P.map(p=>p[2]).join(",")+"&daily=weather_code,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant&timezone=Asia%2FTokyo&wind_speed_unit=ms&forecast_days=9";
  const r=await fetch(url,{signal:AbortSignal.timeout(10000)});if(!r.ok)throw new Error(r.status);let j=await r.json();j=Array.isArray(j)?j:[j];
- const lv=w=>w>=8?"強風・荒れ":w>=6?"風強め":w>=3?"やや風あり":"穏やか",out=[];
- for(const d of [sat,sun]){const ds=iso(d),L=[];let rain=0,wc=null;
-  P.forEach((p,i)=>{const D=j[i].daily,k=D.time.indexOf(ds);if(k<0)return;const w=D.wind_speed_10m_max[k];rain=Math.max(rain,D.precipitation_sum[k]||0);if(wc==null)wc=D.weather_code[k];
-   const short=p[0]==="琵琶湖大橋"?"大橋":p[0]==="プリンスホテル前"?"プリンス前":p[0];L.push(`${short} ${dirN(D.wind_direction_10m_dominant[k])}${w.toFixed(0)}m(${lv(w)})`)});
-  out.push(`${d.getMonth()+1}/${d.getDate()}(${WKD[d.getDay()]})${rain>=1?" 雨"+rain.toFixed(0)+"mm":""}\n${L.join("\n")}`)}
- return `【週末の琵琶湖 風予報】\n${out.join("\n\n")}\n※風は日中の最大値の目安\n詳しくはこちら→${POSTURL}\n#琵琶湖 #バス釣り`}
+ const lv=w=>w>=8?"強風・荒れ":w>=6?"風強め":w>=3?"やや風":"穏やか",out=[],G={"北湖":["塩津","彦根"],"南湖":["琵琶湖大橋","プリンスホテル前"]};
+ for(const d of [sat,sun]){const ds=iso(d),L=[];let rain=0,mx=0;
+  for(const [gn,ns] of Object.entries(G)){let bw=-1,bd=0;ns.forEach(n=>{const i=P.findIndex(p=>p[0]===n);if(i<0)return;const D=j[i].daily,k=D.time.indexOf(ds);if(k<0)return;rain=Math.max(rain,D.precipitation_sum[k]||0);const w=D.wind_speed_10m_max[k];if(w>bw){bw=w;bd=D.wind_direction_10m_dominant[k]}});
+   if(bw>=0){L.push(`${gn}${dirN(bd)}${bw.toFixed(0)}m`);mx=Math.max(mx,bw)}}
+  out.push(`${d.getMonth()+1}/${d.getDate()}(${WKD[d.getDay()]}) ${L.join(" ")} ${lv(mx)}${rain>=1?" 雨"+rain.toFixed(0)+"mm":""}`)}
+ return `【週末の琵琶湖 風予報】\n${out.join("\n")}\n詳しくはこちら→${POSTURL}\n#琵琶湖 #バス釣り`}
+const xLen=t=>{t=t.replace(/https?:\/\/\S+/g,"x".repeat(23));let n=0;for(const c of t){const o=c.codePointAt(0);n+=(o<=0x10ff||(o>=0x2000&&o<=0x200d)||(o>=0x2010&&o<=0x201f)||(o>=0x2032&&o<=0x2037))?1:2}return n};
 function postBind(){const x=$("#ptx");if(!x)return;
- $("#pt1").onclick=()=>{x.value=postTemp()};
- $("#pt2").onclick=async()=>{x.value="取得中…";try{x.value=await postWeek()}catch(e){x.value="予報を取得できませんでした("+(e.message||e)+")"}};
+ const cnt=()=>{const n=xLen(x.value),e=$("#ptn");if(!e)return;e.innerHTML=x.value?`文字数 <b${n>280?' style="color:#c2410c"':""}>${n}</b> / 280(全角は2、リンクは23として数えています)${n>280?"<br><b style=\"color:#c2410c\">⚠ 無料のXアカウントだと長すぎます。短くしてください</b>":""}`:""};x.oninput=cnt;
+ $("#pt1").onclick=()=>{x.value=postTemp();cnt()};
+ $("#pt2").onclick=async()=>{x.value="取得中…";try{x.value=await postWeek();cnt()}catch(e){x.value="予報を取得できませんでした("+(e.message||e)+")"}};
  $("#ptc").onclick=async()=>{if(!x.value)return;try{await navigator.clipboard.writeText(x.value);$("#ptc").textContent="コピーしました";setTimeout(()=>{const b=$("#ptc");if(b)b.textContent="コピー"},1800)}catch(e){x.focus();x.select()}}}
 function now(){
  const t=new Date(),a=age(t.getFullYear(),t.getMonth(),t.getDate()),rs=all(),H=36e5,keys=Object.keys(LAB);
