@@ -324,6 +324,36 @@ function spawnCard(rs,at){at=at||new Date();const ds=at.getFullYear()+"-"+pad(at
  ${inS?`<div><span style="background:${ST[1]};color:#fff;border-radius:12px;padding:3px 12px;font-weight:bold">${ST[0]}</span></div><div class="note" style="margin-top:4px">${ST[2]}</div>`:`<div class="note">いまは産卵期(2〜8月ごろ)ではありません。</div>`}${sh}
  <div class="note" style="margin-top:6px">平年(${BASES[base]})では、水温が15℃になるのは${lbl(cross(15))}、16℃は${lbl(cross(16))}、20℃は${lbl(cross(20))}ごろです。</div>
  <div class="note" style="margin-top:4px">南湖の沖の水温での目安です。北湖は場所差が大きいため対象外です。岸の浅場や内湖は、沖より先に暖まります。急な冷え込みや大雨で、産卵が中断・遅れることもあります。主な産卵水温16〜20℃は環境省の琵琶湖の資料によります。</div></div>`}
+/* ===== X投稿文づくり(運営用) ===== */
+const POSTURL="https://biwafishing.github.io/biwako-opendata/";
+function postCard(){return `<div class="card"><b>X投稿文をつくる</b><p class="note">押すと、最新の数字から投稿文ができます。コピーしてXに貼ってください。</p>
+ <div class="row"><button id="pt1" class="pri">今朝の水温・水位</button><button id="pt2" class="pri">週末の予報</button></div>
+ <textarea id="ptx" rows="9" placeholder="ここに投稿文が出ます"></textarea><div class="row"><button id="ptc">コピー</button></div></div>`}
+function postTemp(){const rs=all(),H=36e5,sg=x=>(x>0?"+":x<0?"-":"±")+Math.abs(x).toFixed(1),d=new Date(),L=[];
+ const by=m=>{const o={};rs.filter(r=>r[m]!=null).forEach(r=>(o[r.place]=o[r.place]||[]).push(r));return o};
+ const lt=q=>q.reduce((x,r)=>r.time>x.time?r:x);
+ const g=by("temp");let big=null;
+ for(const p of Object.keys(g)){const q=g[p],l=lt(q),T=new Date(l.time).getTime();if((Date.now()-T)/H>=6)continue;const b=nearest(q,T-24*H,2*H),df=b?l.temp-b.temp:null;L.push(`${p} ${l.temp.toFixed(1)}℃${df==null?"":"(前日比"+sg(df)+")"}`);if(df!=null&&(!big||Math.abs(df)>Math.abs(big)))big=df}
+ if(!L.length)return"水温データが取れていません。少し待ってからもう一度押してください。";
+ const lv=by("level")["琵琶湖(平均)"];let lvt="";if(lv){const l=lt(lv),T=new Date(l.time).getTime(),b=nearest(lv,T-24*H,2*H);lvt=`\n水位 ${l.level.toFixed(2)}m`+(b?`(前日比${l.level-b.level>=0?"+":"-"}${Math.abs(l.level-b.level).toFixed(2)}m)`:"")}
+ const note=big==null||Math.abs(big)<1?"":big<=-1?"\n水温が下がっています。":"\n水温が上がっています。";
+ return `【琵琶湖 ${d.getMonth()+1}/${d.getDate()} 今朝の水温】\n${L.join("\n")}${lvt}${note}\n詳しくはこちら→${POSTURL}\n#琵琶湖 #バス釣り`}
+const WKD=["日","月","火","水","木","金","土"];
+async function postWeek(){const nm=["塩津","彦根","琵琶湖大橋","プリンスホテル前"],P=nm.map(n=>WXP.find(x=>x[0]===n)).filter(Boolean);
+ const t=new Date(),dow=t.getDay(),add=dow===0?6:6-dow,sat=new Date(t.getFullYear(),t.getMonth(),t.getDate()+add),sun=new Date(sat.getFullYear(),sat.getMonth(),sat.getDate()+1);
+ const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+ const url="https://api.open-meteo.com/v1/forecast?latitude="+P.map(p=>p[1]).join(",")+"&longitude="+P.map(p=>p[2]).join(",")+"&daily=weather_code,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant&timezone=Asia%2FTokyo&wind_speed_unit=ms&forecast_days=9";
+ const r=await fetch(url,{signal:AbortSignal.timeout(10000)});if(!r.ok)throw new Error(r.status);let j=await r.json();j=Array.isArray(j)?j:[j];
+ const lv=w=>w>=8?"強風・荒れ":w>=6?"風強め":w>=3?"やや風あり":"穏やか",out=[];
+ for(const d of [sat,sun]){const ds=iso(d),L=[];let rain=0,wc=null;
+  P.forEach((p,i)=>{const D=j[i].daily,k=D.time.indexOf(ds);if(k<0)return;const w=D.wind_speed_10m_max[k];rain=Math.max(rain,D.precipitation_sum[k]||0);if(wc==null)wc=D.weather_code[k];
+   const short=p[0]==="琵琶湖大橋"?"大橋":p[0]==="プリンスホテル前"?"プリンス前":p[0];L.push(`${short} ${dirN(D.wind_direction_10m_dominant[k])}${w.toFixed(0)}m(${lv(w)})`)});
+  out.push(`${d.getMonth()+1}/${d.getDate()}(${WKD[d.getDay()]})${rain>=1?" 雨"+rain.toFixed(0)+"mm":""}\n${L.join("\n")}`)}
+ return `【週末の琵琶湖 風予報】\n${out.join("\n\n")}\n※風は日中の最大値の目安\n詳しくはこちら→${POSTURL}\n#琵琶湖 #バス釣り`}
+function postBind(){const x=$("#ptx");if(!x)return;
+ $("#pt1").onclick=()=>{x.value=postTemp()};
+ $("#pt2").onclick=async()=>{x.value="取得中…";try{x.value=await postWeek()}catch(e){x.value="予報を取得できませんでした("+(e.message||e)+")"}};
+ $("#ptc").onclick=async()=>{if(!x.value)return;try{await navigator.clipboard.writeText(x.value);$("#ptc").textContent="コピーしました";setTimeout(()=>{const b=$("#ptc");if(b)b.textContent="コピー"},1800)}catch(e){x.focus();x.select()}}}
 function now(){
  const t=new Date(),a=age(t.getFullYear(),t.getMonth(),t.getDate()),rs=all(),H=36e5,keys=Object.keys(LAB);
  const la=auto.reduce((m,r)=>r.time>m?r.time:m,"");
@@ -350,7 +380,8 @@ function now(){
  h+=`<p class="note">平年差は、選んだ期間の同じ時期の平均との差です(水位は鳥居川の日データから作成。全期間は1991〜2024年)。「高め/低め」は±1標準偏差を超えた場合です。水温の数字は、平年と同じくらいなら黒、高めなら<span class="th">赤</span>、低めなら<span class="tl">青</span>で表します(「並」と同じ基準)。雄琴沖は閉局前のデータと唐橋・大橋からの推定値です。</p>`;
  if(err)h+=`<p class="note">${esc(err)}</p>`;
  try{h+=spawnCard(rs)}catch(e){}
- $("#v-now").innerHTML=h;
+ h+=postCard();
+ $("#v-now").innerHTML=h;postBind();
  const b=$("#bs");if(b){b.value=view.base;b.onchange=e=>{view.base=e.target.value;saveView();now()}}
 }
 let calSel=null,calPl="彦根",calPick=false;
