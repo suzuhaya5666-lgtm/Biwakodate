@@ -34,7 +34,10 @@
   textarea{min-height:76px;resize:vertical}
   input:focus,select:focus,textarea:focus{outline:2px solid var(--sun1);border-color:transparent}
   .row{display:flex;gap:8px}
-  .row>*{flex:1}
+  .row>*{flex:1;min-width:0}
+  input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;
+    min-width:0;max-width:100%;height:46px;text-align:left}
+  input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left}
   .unit{display:flex;gap:6px}
   .unit input{flex:1}
   .unit select{width:88px;flex:none}
@@ -68,7 +71,7 @@
 </head>
 <body>
 <header>
-  <h1>🐟 デジタル魚拓 応募フォーム</h1>
+  <h1>デジタル魚拓 応募フォーム</h1>
   <p>@biwa_fishing が無料で作ります。わかる項目だけ入力してください（全部空欄でもOK）。</p>
 </header>
 
@@ -113,10 +116,12 @@
 
     <section class="card">
       <h2><span class="num">2</span>釣った日・場所</h2>
+      <label for="date">釣った日</label>
+      <input type="date" id="date">
       <div class="row">
         <div>
-          <label for="date">釣った日</label>
-          <input type="date" id="date">
+          <label for="clock">時刻 <small>（わかれば）</small></label>
+          <input type="time" id="clock">
         </div>
         <div>
           <label for="time">時間帯</label>
@@ -226,7 +231,7 @@ const STORE_KEY = 'gyotakuDraft_v1';
 
 const $ = id => document.getElementById(id);
 const f = $('f');
-const textIds = ['species','length','weight','weightUnit','date','time','place','angler','lure','rod','reel','line','memo'];
+const textIds = ['species','length','weight','weightUnit','date','clock','time','place','angler','lure','rod','reel','line','memo'];
 
 function radio(name){ const el = f.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; }
 function checks(name){ return [...f.querySelectorAll(`input[name="${name}"]:checked`)].map(e=>e.value); }
@@ -250,7 +255,7 @@ function buildText(){
   L.push('');
   L.push('■ 日時・場所');
   add('釣った日', fmtDate(v('date')));
-  add('時間帯', v('time'));
+  add('時間', [v('clock'), v('time') && (v('clock') ? `（${v('time')}）` : v('time'))].join(''));
   add('場所', v('place'));
   L.push('');
   L.push('■ 釣り人・タックル');
