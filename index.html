@@ -750,7 +750,7 @@ function trip(){
   chartRender(root,tv,op);return}
  const L=trips.slice().sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0),ST=yearStats();
  if(L.length&&wxNeed())loadWx();if(L.length)[...new Set(L.filter(isBw).map(t=>+t.date.slice(0,4)))].forEach(loadWxHr);
- el.innerHTML=`<div class="card"><div class="row"><b style="flex:1;font-size:17px">釣行の記録</b><button class="pri" id="tn">＋ 追加</button></div>
+ el.innerHTML=`<a href="gyotaku.html" class="card" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit"><span style="flex:1"><b>デジタル魚拓の応募フォーム</b><br><span class="note">釣った魚をデジタル魚拓にします（無料）</span></span><span style="font-size:20px;opacity:.5">›</span></a><div class="card"><div class="row"><b style="flex:1;font-size:17px">釣行の記録</b><button class="pri" id="tn">＋ 追加</button></div>
   <p class="note">記録はこの端末に保存し、Googleドライブにも自動でバックアップします(ログイン中のみ。下で状態を確認できます)。</p>
   ${ST.length?`<div class="lbl">年間の釣行日数</div>`+ST.map(x=>`<div style="margin:2px 0"><b>${x.y}年</b>　<b style="font-size:18px">${x.all}</b>日　<span class="note">釣行${x.n}回(琵琶湖 ${x.bw}日・その他 ${x.ot}日)</span></div>`).join("")+`<div style="height:6px"></div>`:""}
   ${L.length?tripGroups(L):'<p class="note">まだ記録がありません。「＋ 追加」から登録できます。</p>'}</div>
