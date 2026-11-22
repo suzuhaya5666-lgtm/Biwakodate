@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>デジタル魚拓 応募フォーム｜琵琶湖観測データ</title>
+<meta name="description" content="@biwa_fishing のデジタル魚拓（無料）の応募フォームです。入力内容がDMの文面になります。">
+<style>
+  :root{
+    --bg:#fff8f2; --card:#ffffff; --ink:#2b2230; --sub:#7a6a72;
+    --sun1:#ff8a4c; --sun2:#e85d75; --sun3:#7b4b94;
+    --line:#f0dfd6; --soft:#fff1e8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    font-size:16px;line-height:1.6}
+  header{background:linear-gradient(135deg,var(--sun1),var(--sun2) 55%,var(--sun3));
+    color:#fff;padding:22px 16px 18px}
+  header h1{margin:0;font-size:22px;letter-spacing:.04em}
+  header p{margin:6px 0 0;font-size:14px;opacity:.95}
+  main{max-width:560px;margin:0 auto;padding:14px 12px 120px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:14px 14px 6px;margin:12px 0}
+  .card h2{margin:0 0 8px;font-size:17px;display:flex;align-items:center;gap:6px}
+  .card h2 .num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+    background:var(--sun2);color:#fff;font-size:13px}
+  .note{font-size:13px;color:var(--sub);margin:0 0 10px}
+  label{display:block;font-size:14px;font-weight:600;margin:10px 0 4px}
+  label small{font-weight:400;color:var(--sub)}
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    width:100%;font-size:16px;padding:10px 11px;border:1px solid #e3cfc4;border-radius:10px;
+    background:#fff;color:var(--ink);font-family:inherit}
+  textarea{min-height:76px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--sun1);border-color:transparent}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1}
+  .unit{display:flex;gap:6px}
+  .unit input{flex:1}
+  .unit select{width:88px;flex:none}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
+  .chips label{margin:0;font-weight:500}
+  .chips input{position:absolute;opacity:0;pointer-events:none}
+  .chips span{display:inline-block;padding:7px 13px;border:1px solid #e3cfc4;border-radius:999px;
+    background:#fff;font-size:14px}
+  .chips input:checked+span{background:var(--sun2);border-color:var(--sun2);color:#fff}
+  .chips input:focus-visible+span{outline:2px solid var(--sun1)}
+  .photo{background:var(--soft);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:14px}
+  .photo ul{margin:4px 0 0;padding-left:1.2em}
+  .photo li{margin:2px 0}
+  pre{white-space:pre-wrap;word-break:break-all;background:#2b2230;color:#fff;border-radius:12px;
+    padding:12px;font-size:13px;line-height:1.55;margin:0 0 12px;font-family:inherit}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,248,242,.96);
+    border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    backdrop-filter:blur(6px)}
+  .bar .in{max-width:560px;margin:0 auto;display:flex;gap:8px}
+  button{font-size:16px;font-weight:700;border:0;border-radius:12px;padding:13px 10px;cursor:pointer;font-family:inherit}
+  .primary{flex:1;color:#fff;background:linear-gradient(135deg,var(--sun1),var(--sun2))}
+  .ghost{background:#fff;color:var(--sun2);border:1px solid var(--sun2);width:96px}
+  .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#2b2230;color:#fff;
+    padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+  .toast.show{opacity:1}
+  .steps{margin:0;padding-left:1.3em;font-size:14px}
+  .steps li{margin:3px 0}
+  footer{text-align:center;font-size:13px;color:var(--sub);margin-top:20px}
+  footer a{color:var(--sun2)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🐟 デジタル魚拓 応募フォーム</h1>
+  <p>@biwa_fishing が無料で作ります。わかる項目だけ入力してください（全部空欄でもOK）。</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>応募の流れ</h2>
+    <ol class="steps">
+      <li>このページでわかる範囲を入力</li>
+      <li>下の「DMで送る」をタップ（文面がコピーされ、XのDMが開きます）</li>
+      <li>DMに文面を貼り付けて、魚の写真を添付して送信</li>
+      <li>内容を確認して、できあがりをDMでお届けします</li>
+    </ol>
+    <p class="note" style="margin-top:8px">※ 計測していない・覚えていない項目は空欄のままで大丈夫です。</p>
+  </section>
+
+  <form id="f" autocomplete="on" onsubmit="return false">
+    <section class="card">
+      <h2><span class="num">1</span>魚のこと</h2>
+      <label for="species">魚種</label>
+      <input type="text" id="species" list="speciesList" placeholder="例：ブラックバス">
+      <datalist id="speciesList">
+        <option value="ブラックバス"><option value="スモールマウスバス"><option value="ナマズ">
+        <option value="ビワコオオナマズ"><option value="ハス"><option value="ニゴイ">
+        <option value="ブルーギル"><option value="シーバス"><option value="チヌ">
+      </datalist>
+      <div class="row">
+        <div>
+          <label for="length">長さ <small>cm</small></label>
+          <input type="number" id="length" inputmode="decimal" step="0.1" min="0" placeholder="例：52">
+        </div>
+        <div>
+          <label for="weight">重さ</label>
+          <div class="unit">
+            <input type="number" id="weight" inputmode="decimal" step="0.01" min="0" placeholder="例：2.3">
+            <select id="weightUnit" aria-label="重さの単位">
+              <option>kg</option><option>g</option><option>lb</option><option>oz</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">2</span>釣った日・場所</h2>
+      <div class="row">
+        <div>
+          <label for="date">釣った日</label>
+          <input type="date" id="date">
+        </div>
+        <div>
+          <label for="time">時間帯</label>
+          <select id="time">
+            <option value="">—</option>
+            <option>朝マズメ</option><option>午前</option><option>昼</option>
+            <option>午後</option><option>夕マズメ</option><option>夜</option>
+          </select>
+        </div>
+      </div>
+      <label for="place">場所 <small>（魚拓に載せたくない場合は空欄でOK）</small></label>
+      <input type="text" id="place" placeholder="例：琵琶湖 南湖・木浜">
+    </section>
+
+    <section class="card">
+      <h2><span class="num">3</span>釣り人・タックル</h2>
+      <label for="angler">魚拓に入れる名前 <small>（ニックネーム可）</small></label>
+      <input type="text" id="angler" placeholder="例：びわ太郎">
+      <label for="lure">ルアー・エサ</label>
+      <input type="text" id="lure" placeholder="例：ノーシンカー 5インチ">
+      <label for="rod">ロッド</label>
+      <input type="text" id="rod">
+      <label for="reel">リール</label>
+      <input type="text" id="reel">
+      <label for="line">ライン</label>
+      <input type="text" id="line" placeholder="例：フロロ 14lb">
+    </section>
+
+    <section class="card">
+      <h2><span class="num">4</span>仕上がりの希望</h2>
+      <label>向き</label>
+      <div class="chips" data-name="orient">
+        <label><input type="radio" name="orient" value="おまかせ" checked><span>おまかせ</span></label>
+        <label><input type="radio" name="orient" value="横長"><span>横長</span></label>
+        <label><input type="radio" name="orient" value="縦長"><span>縦長（スマホ壁紙向き）</span></label>
+        <label><input type="radio" name="orient" value="正方形"><span>正方形</span></label>
+      </div>
+      <label>背景</label>
+      <div class="chips">
+        <label><input type="radio" name="bg" value="おまかせ" checked><span>おまかせ</span></label>
+        <label><input type="radio" name="bg" value="白・和紙風"><span>白・和紙風</span></label>
+        <label><input type="radio" name="bg" value="黒"><span>黒</span></label>
+        <label><input type="radio" name="bg" value="その他（メモ欄に記入）"><span>その他</span></label>
+      </div>
+      <label>魚拓に入れる文字 <small>（複数選べます）</small></label>
+      <div class="chips">
+        <label><input type="checkbox" name="txt" value="名前" checked><span>名前</span></label>
+        <label><input type="checkbox" name="txt" value="日付" checked><span>日付</span></label>
+        <label><input type="checkbox" name="txt" value="場所"><span>場所</span></label>
+        <label><input type="checkbox" name="txt" value="サイズ" checked><span>サイズ</span></label>
+        <label><input type="checkbox" name="txt" value="魚種" checked><span>魚種</span></label>
+        <label><input type="checkbox" name="txt" value="タックル"><span>タックル</span></label>
+      </div>
+      <label>使い道</label>
+      <div class="chips">
+        <label><input type="checkbox" name="use" value="Xやインスタに投稿"><span>SNSに投稿</span></label>
+        <label><input type="checkbox" name="use" value="スマホの壁紙"><span>壁紙</span></label>
+        <label><input type="checkbox" name="use" value="印刷して飾る"><span>印刷</span></label>
+      </div>
+      <label for="memo">そのほかの希望・メモ</label>
+      <textarea id="memo" placeholder="例：落款（ハンコ）風の名前にしてほしい／初めての50アップです など"></textarea>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">5</span>写真について</h2>
+      <div class="photo">
+        写真はDMに添付してください（何枚でもOK）。
+        <ul>
+          <li>魚の<b>真横</b>から、<b>全身</b>が写っているもの</li>
+          <li>メジャーやスケールが一緒に写っていると、形が正確になります</li>
+          <li>ヒレが開いている写真があればうれしいです</li>
+        </ul>
+      </div>
+      <label>DMに添付する写真</label>
+      <div class="chips">
+        <label><input type="radio" name="photo" value="添付します" checked><span>添付します</span></label>
+        <label><input type="radio" name="photo" value="あとで送ります"><span>あとで送ります</span></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>DMの文面（確認用）</h2>
+      <p class="note">この文面がコピーされます。</p>
+      <pre id="preview"></pre>
+    </section>
+  </form>
+
+  <footer>
+    <a href="./">琵琶湖観測データ</a> ／ <a href="https://x.com/biwa_fishing" target="_blank" rel="noopener">@biwa_fishing</a>
+  </footer>
+</main>
+
+<div class="bar"><div class="in">
+  <button type="button" class="ghost" id="clear">クリア</button>
+  <button type="button" class="primary" id="send">コピーしてDMで送る</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== 設定 =====
+// @biwa_fishing の数字のユーザーID（分かれば入れる）。
+// 入れるとボタンで直接DM作成画面が開き、文面も入った状態になります。
+// 空のままだとプロフィールが開くので、「メッセージ」から貼り付けてもらいます。
+const DM_RECIPIENT_ID = '';
+const X_SCREEN_NAME = 'biwa_fishing';
+const STORE_KEY = 'gyotakuDraft_v1';
+
+const $ = id => document.getElementById(id);
+const f = $('f');
+const textIds = ['species','length','weight','weightUnit','date','time','place','angler','lure','rod','reel','line','memo'];
+
+function radio(name){ const el = f.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; }
+function checks(name){ return [...f.querySelectorAll(`input[name="${name}"]:checked`)].map(e=>e.value); }
+function v(id){ return $(id).value.trim(); }
+
+function fmtDate(s){
+  if(!s) return '';
+  const [y,m,d] = s.split('-');
+  return `${y}/${Number(m)}/${Number(d)}`;
+}
+
+function buildText(){
+  const L = [];
+  const add = (k,val) => { if(val) L.push(`${k}：${val}`); };
+  L.push('【デジタル魚拓 応募】');
+  L.push('');
+  L.push('■ 魚');
+  add('魚種', v('species'));
+  add('長さ', v('length') ? v('length') + 'cm' : '');
+  add('重さ', v('weight') ? v('weight') + v('weightUnit') : '');
+  L.push('');
+  L.push('■ 日時・場所');
+  add('釣った日', fmtDate(v('date')));
+  add('時間帯', v('time'));
+  add('場所', v('place'));
+  L.push('');
+  L.push('■ 釣り人・タックル');
+  add('名前', v('angler'));
+  add('ルアー・エサ', v('lure'));
+  add('ロッド', v('rod'));
+  add('リール', v('reel'));
+  add('ライン', v('line'));
+  L.push('');
+  L.push('■ 仕上がり');
+  add('向き', radio('orient'));
+  add('背景', radio('bg'));
+  add('入れる文字', checks('txt').join('・') || 'なし');
+  add('使い道', checks('use').join('・'));
+  add('メモ', v('memo'));
+  L.push('');
+  add('写真', radio('photo'));
+
+  // 中身のない見出しを消す
+  const out = [];
+  for(let i=0;i<L.length;i++){
+    const line = L[i];
+    if(line.startsWith('■')){
+      let j=i+1, has=false;
+      while(j<L.length && L[j] !== '' && !L[j].startsWith('■')){ has=true; j++; }
+      if(!has){ i = j; continue; }
+    }
+    out.push(line);
+  }
+  while(out.length && out[out.length-1]==='') out.pop();
+  return out.join('\n').replace(/\n{3,}/g,'\n\n');
+}
+
+function save(){
+  try{
+    const data = {};
+    textIds.forEach(id => data[id] = $(id).value);
+    ['orient','bg','photo'].forEach(n => data[n] = radio(n));
+    ['txt','use'].forEach(n => data[n] = checks(n));
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  }catch(e){}
+}
+function load(){
+  try{
+    const data = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if(!data) return;
+    textIds.forEach(id => { if(data[id] != null) $(id).value = data[id]; });
+    ['orient','bg','photo'].forEach(n => {
+      const el = f.querySelector(`input[name="${n}"][value="${CSS.escape(data[n]||'')}"]`);
+      if(el) el.checked = true;
+    });
+    ['txt','use'].forEach(n => {
+      if(!Array.isArray(data[n])) return;
+      f.querySelectorAll(`input[name="${n}"]`).forEach(e => e.checked = data[n].includes(e.value));
+    });
+  }catch(e){}
+}
+
+function update(){ $('preview').textContent = buildText(); save(); }
+
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+async function copy(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+    }catch(e2){ return false; }
+  }
+}
+
+$('send').addEventListener('click', async () => {
+  const text = buildText();
+  const ok = await copy(text);
+  let url;
+  if(DM_RECIPIENT_ID){
+    url = `https://x.com/messages/compose?recipient_id=${DM_RECIPIENT_ID}&text=${encodeURIComponent(text)}`;
+  }else{
+    url = `https://x.com/${X_SCREEN_NAME}`;
+  }
+  toast(ok ? 'コピーしました。DMに貼り付けて写真を添付してください' : 'コピーできませんでした。確認欄の文面を長押しでコピーしてください');
+  setTimeout(() => { window.location.href = url; }, ok ? 900 : 2500);
+});
+
+$('clear').addEventListener('click', () => {
+  if(!confirm('入力内容をすべて消しますか？')) return;
+  f.reset();
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  update();
+});
+
+f.addEventListener('input', update);
+f.addEventListener('change', update);
+load();
+update();
+</script>
+</body>
+</html>
