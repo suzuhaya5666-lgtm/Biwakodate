@@ -286,6 +286,62 @@ def collect_rivers():
         w.writerows(rows)
     print(f"河川の水位を {len(rows)} 行追記しました(基準超過 {len(RIVER_ALERTS)} 件)")
 
+# 滋賀県管理の河川の水位(m)。出典: 滋賀県土木防災情報システム(shiga-bousai.jp)
+# 水位の基準は川ごとに違う(堤防天端・標高など)ので、数値そのものではなく変化を見るために使う。
+# 各河川は、一覧表で最後に並ぶ観測所(下流側)を採用する。
+PREF_RIVERS = ["雄琴川", "千丈川", "吾妻川", "狼川", "蛇砂川", "佐久良川", "惣四郎川", "余呉川", "高時川", "草野川", "田川", "八田川", "鴨川", "天川"]
+
+
+def collect_pref_rivers():
+    import http.cookiejar
+    import re
+    import html as _html
+    from html import unescape
+    op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+    op.addheaders = [("User-Agent", "Mozilla/5.0 (biwako-opendata collector)")]
+    base = "https://shiga-bousai.jp/sp"
+    op.open(base + "/index.php", timeout=30).read()
+    jst = datetime.now(timezone(timedelta(hours=9)))
+    q = jst - timedelta(minutes=10)
+    q = q.replace(minute=q.minute // 10 * 10, second=0, microsecond=0)
+    url = f"{base}/wl/wl_table.php?day={q:%Y-%m-%d}&time={q:%H:%M}&interval=60&id1=7&id2=0&id3=0&id4=0&sid=0"
+    page = op.open(url, timeout=30).read().decode("utf-8", "replace")
+    by = {}
+    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", page, flags=re.S):
+        tds = [unescape(re.sub(r"<[^>]+>", "", t)).strip() for t in re.findall(r"<td[^>]*>(.*?)</td>", tr, flags=re.S)]
+        if len(tds) < 4:
+            continue
+        name, lv, river = tds[0], tds[1], tds[-1]
+        if river in PREF_RIVERS and "(国)" not in name:
+            by.setdefault(river, []).append((name, lv))
+    t = jst.replace(minute=jst.minute // 30 * 30, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M")
+    seen = set()
+    if R_OUT.exists():
+        with R_OUT.open(encoding="utf-8") as f:
+            for r in csv.DictReader(f):
+                seen.add((r["time"], r["place"]))
+    rows = []
+    for river in PREF_RIVERS:
+        cands = by.get(river, [])
+        print(f"県河川 {river}: 観測所 {[c[0] for c in cands]}")
+        for name, lv in reversed(cands):
+            try:
+                v = float(lv)
+            except ValueError:
+                continue
+            label = f"{river} {name}"
+            if (t, label) not in seen:
+                rows.append({"time": t, "place": label, "level": v})
+            print(f"  採用: {label} = {v}")
+            break
+    new_file = not R_OUT.exists()
+    with R_OUT.open("a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=R_HEAD)
+        if new_file:
+            w.writeheader()
+        w.writerows(rows)
+    print(f"県管理河川の水位を {len(rows)} 行追記しました")
+
 # 気象庁の警報・注意報(滋賀県)。出典: 気象庁ホームページ
 A_OUT = Path("data/alerts.json")
 A_NAME = {
@@ -463,7 +519,7 @@ def main():
             w.writeheader()
         w.writerows(rows)
     print(f"{len(rows)} 行を追記しました")
-    for fn in (collect_weather, collect_weather_hourly, collect_forecast_cache, collect_rivers, collect_alerts):
+    for fn in (collect_weather, collect_weather_hourly, collect_forecast_cache, collect_rivers, collect_pref_rivers, collect_alerts):
         try:
             fn()
         except Exception as e:
