@@ -38,6 +38,9 @@
   input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;display:block;
     min-width:0;max-width:100%;height:46px;text-align:left}
   input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left}
+  .clock{display:flex;align-items:center;gap:4px}
+  .clock select{flex:1;min-width:0;padding:10px 6px}
+  .clock span{font-size:14px;color:var(--sub)}
   .unit{display:flex;gap:6px}
   .unit input{flex:1}
   .unit select{width:88px;flex:none}
@@ -48,6 +51,12 @@
     background:#fff;font-size:14px}
   .chips input:checked+span{background:var(--sun2);border-color:var(--sun2);color:#fff}
   .chips input:focus-visible+span{outline:2px solid var(--sun1)}
+  .prio span[data-n]::before{content:attr(data-n);margin-right:4px;font-weight:700}
+  .gallery{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -14px 12px;padding:0 14px 4px;-webkit-overflow-scrolling:touch}
+  .gallery a{flex:0 0 88%;scroll-snap-align:center}
+  .gallery img,.ideal img{display:block;width:100%;height:auto;border-radius:10px}
+  .ideal{margin:10px 0 0}
+  .ideal figcaption{font-size:12px;color:var(--sub);text-align:center;margin-top:4px}
   .photo{background:var(--soft);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:14px}
   .photo ul{margin:4px 0 0;padding-left:1.2em}
   .photo li{margin:2px 0}
@@ -87,6 +96,16 @@
     <p class="note" style="margin-top:8px">※ 計測していない・覚えていない項目は空欄のままで大丈夫です。</p>
   </section>
 
+  <section class="card">
+    <h2>仕上がり見本</h2>
+    <p class="note">横にスワイプで見られます。タップで大きく表示します。</p>
+    <div class="gallery">
+      <a href="gyotaku-sample1.jpg" target="_blank"><img src="gyotaku-sample1.jpg" alt="デジタル魚拓の見本1" loading="lazy"></a>
+      <a href="gyotaku-sample2.jpg" target="_blank"><img src="gyotaku-sample2.jpg" alt="デジタル魚拓の見本2" loading="lazy"></a>
+      <a href="gyotaku-sample3.jpg" target="_blank"><img src="gyotaku-sample3.jpg" alt="デジタル魚拓の見本3" loading="lazy"></a>
+    </div>
+  </section>
+
   <form id="f" autocomplete="on" onsubmit="return false">
     <section class="card">
       <h2><span class="num">1</span>魚のこと</h2>
@@ -120,8 +139,11 @@
       <input type="date" id="date">
       <div class="row">
         <div>
-          <label for="clock">時刻 <small>（わかれば）</small></label>
-          <input type="time" id="clock">
+          <label for="hh">時刻 <small>（わかれば）</small></label>
+          <div class="clock">
+            <select id="hh" aria-label="時"><option value="">--</option></select><span>時</span>
+            <select id="mm" aria-label="分"><option value="">--</option></select><span>分</span>
+          </div>
         </div>
         <div>
           <label for="time">時間帯</label>
@@ -166,14 +188,19 @@
         <label><input type="radio" name="bg" value="黒"><span>黒</span></label>
         <label><input type="radio" name="bg" value="その他（メモ欄に記入）"><span>その他</span></label>
       </div>
-      <label>魚拓に入れる文字 <small>（複数選べます）</small></label>
-      <div class="chips">
+      <label>魚拓に入れる文字 <small>（入れたい順にタップ）</small></label>
+      <p class="note">タップした順に優先順位（①②③…）がつきます。もう一度タップすると外れます。</p>
+      <div class="chips prio">
+        <label><input type="checkbox" name="txt" value="魚種" checked><span>魚種</span></label>
+        <label><input type="checkbox" name="txt" value="サイズ" checked><span>サイズ</span></label>
         <label><input type="checkbox" name="txt" value="名前" checked><span>名前</span></label>
         <label><input type="checkbox" name="txt" value="日付" checked><span>日付</span></label>
         <label><input type="checkbox" name="txt" value="場所"><span>場所</span></label>
-        <label><input type="checkbox" name="txt" value="サイズ" checked><span>サイズ</span></label>
-        <label><input type="checkbox" name="txt" value="魚種" checked><span>魚種</span></label>
+        <label><input type="checkbox" name="txt" value="時刻"><span>時刻</span></label>
         <label><input type="checkbox" name="txt" value="タックル"><span>タックル</span></label>
+      </div>
+      <div class="photo" style="margin-bottom:10px">
+        ⚠️ 魚の形や大きさによっては、レイアウトの都合で<b>すべての文字を入れられない場合があります</b>。そのときは優先順位の高いものから入れます。
       </div>
       <label>使い道</label>
       <div class="chips">
@@ -188,10 +215,16 @@
     <section class="card">
       <h2><span class="num">5</span>写真について</h2>
       <div class="photo">
-        写真はDMに添付してください（何枚でもOK）。
-        <ul>
+        写真はDMに添付してください。<br>
+        写真には魚拓に<b>向いているもの・向いていないもの</b>があります。その魚が写っている写真を<b>何枚か</b>送っていただければ、こちらで魚拓に合う一枚を選びます。
+        <figure class="ideal">
+          <a href="gyotaku-ideal.jpg" target="_blank"><img src="gyotaku-ideal.jpg" alt="魚拓に向いている写真の例" loading="lazy"></a>
+          <figcaption>魚拓に向いている写真の例</figcaption>
+        </figure>
+        <ul style="margin-top:8px">
+          <li style="list-style:none;margin-left:-1.2em;font-weight:600">特に助かる写真</li>
           <li>魚の<b>真横</b>から、<b>全身</b>が写っているもの</li>
-          <li>メジャーやスケールが一緒に写っていると、形が正確になります</li>
+          <li>魚体に砂や泥、ゴミなどが付いていないもの</li>
           <li>ヒレが開いている写真があればうれしいです</li>
         </ul>
       </div>
@@ -231,11 +264,35 @@ const STORE_KEY = 'gyotakuDraft_v1';
 
 const $ = id => document.getElementById(id);
 const f = $('f');
-const textIds = ['species','length','weight','weightUnit','date','clock','time','place','angler','lure','rod','reel','line','memo'];
+const textIds = ['species','length','weight','weightUnit','date','hh','mm','time','place','angler','lure','rod','reel','line','memo'];
 
 function radio(name){ const el = f.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; }
+let txtOrder = [];
+const CIRCLED = '①②③④⑤⑥⑦⑧⑨';
+function syncPrio(){
+  f.querySelectorAll('input[name="txt"]').forEach(e => {
+    e.checked = txtOrder.includes(e.value);
+    const sp = e.nextElementSibling, i = txtOrder.indexOf(e.value);
+    if(i >= 0) sp.dataset.n = CIRCLED[i]; else delete sp.dataset.n;
+  });
+}
+function defaultOrder(){ txtOrder = [...f.querySelectorAll('input[name="txt"]')].filter(e=>e.defaultChecked).map(e=>e.value); syncPrio(); }
+f.querySelectorAll('input[name="txt"]').forEach(e => e.addEventListener('change', () => {
+  txtOrder = txtOrder.filter(x => x !== e.value);
+  if(e.checked) txtOrder.push(e.value);
+  syncPrio();
+}));
 function checks(name){ return [...f.querySelectorAll(`input[name="${name}"]:checked`)].map(e=>e.value); }
 function v(id){ return $(id).value.trim(); }
+
+// 時刻の選択肢を作る
+for(let h=0;h<24;h++) $('hh').add(new Option(String(h), String(h)));
+for(let m=0;m<60;m++) $('mm').add(new Option(String(m).padStart(2,'0'), String(m).padStart(2,'0')));
+function clockText(){
+  const h = v('hh'), m = v('mm');
+  if(!h) return '';
+  return m ? `${h}:${m}` : `${h}時頃`;
+}
 
 function fmtDate(s){
   if(!s) return '';
@@ -255,7 +312,7 @@ function buildText(){
   L.push('');
   L.push('■ 日時・場所');
   add('釣った日', fmtDate(v('date')));
-  add('時間', [v('clock'), v('time') && (v('clock') ? `（${v('time')}）` : v('time'))].join(''));
+  add('時間', [clockText(), v('time') && (clockText() ? `（${v('time')}）` : v('time'))].join(''));
   add('場所', v('place'));
   L.push('');
   L.push('■ 釣り人・タックル');
@@ -268,7 +325,7 @@ function buildText(){
   L.push('■ 仕上がり');
   add('向き', radio('orient'));
   add('背景', radio('bg'));
-  add('入れる文字', checks('txt').join('・') || 'なし');
+  add('入れる文字（優先順）', txtOrder.map((x,i)=>CIRCLED[i]+x).join(' ') || 'なし');
   add('使い道', checks('use').join('・'));
   add('メモ', v('memo'));
   L.push('');
@@ -294,7 +351,8 @@ function save(){
     const data = {};
     textIds.forEach(id => data[id] = $(id).value);
     ['orient','bg','photo'].forEach(n => data[n] = radio(n));
-    ['txt','use'].forEach(n => data[n] = checks(n));
+    data.txt = txtOrder;
+    data.use = checks('use');
     localStorage.setItem(STORE_KEY, JSON.stringify(data));
   }catch(e){}
 }
@@ -307,7 +365,8 @@ function load(){
       const el = f.querySelector(`input[name="${n}"][value="${CSS.escape(data[n]||'')}"]`);
       if(el) el.checked = true;
     });
-    ['txt','use'].forEach(n => {
+    if(Array.isArray(data.txt)){ txtOrder = data.txt.slice(); syncPrio(); }
+    ['use'].forEach(n => {
       if(!Array.isArray(data[n])) return;
       f.querySelectorAll(`input[name="${n}"]`).forEach(e => e.checked = data[n].includes(e.value));
     });
@@ -348,12 +407,14 @@ $('send').addEventListener('click', async () => {
 $('clear').addEventListener('click', () => {
   if(!confirm('入力内容をすべて消しますか？')) return;
   f.reset();
+  defaultOrder();
   try{ localStorage.removeItem(STORE_KEY); }catch(e){}
   update();
 });
 
 f.addEventListener('input', update);
 f.addEventListener('change', update);
+defaultOrder();
 load();
 update();
 </script>
