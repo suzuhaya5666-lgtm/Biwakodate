@@ -57,6 +57,9 @@
   .gallery img,.ideal img{display:block;width:100%;height:auto;border-radius:10px}
   .ideal{margin:10px 0 0}
   .ideal figcaption{font-size:12px;color:var(--sub);text-align:center;margin-top:4px}
+  .sub{background:var(--soft);border-radius:12px;padding:2px 12px 4px;margin:-4px 0 10px}
+  .sub .chips span{background:#fff}
+  .sub .chips input:checked+span{background:var(--sun2)}
   .photo{background:var(--soft);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:14px}
   .photo ul{margin:4px 0 0;padding-left:1.2em}
   .photo li{margin:2px 0}
@@ -182,11 +185,23 @@
       <label>背景</label>
       <div class="chips">
         <label><input type="radio" name="bg" value="おまかせ" checked><span>おまかせ</span></label>
-        <label><input type="radio" name="bg" value="白・和紙風"><span>白・和紙風</span></label>
-        <label><input type="radio" name="bg" value="黒"><span>黒</span></label>
-        <label><input type="radio" name="bg" value="その他（メモ欄に記入）"><span>その他</span></label>
+        <label><input type="radio" name="bg" value="単色"><span>単色</span></label>
+        <label><input type="radio" name="bg" value="釣り場の写真"><span>釣り場の写真</span></label>
       </div>
-      <label>魚拓に入れる文字 <small>（入れたい順にタップ）</small></label>
+      <div class="sub" id="bgColorBox" hidden>
+        <label for="bgColor">色の希望 <small>（あれば）</small></label>
+        <input type="text" id="bgColor">
+      </div>
+      <div class="sub" id="bgSpotBox" hidden>
+        <label>釣り場</label>
+        <div class="chips">
+          <label><input type="radio" name="bgSpot" value="おまかせ" checked><span>おまかせ</span></label>
+          <label><input type="radio" name="bgSpot" value="南湖"><span>南湖</span></label>
+          <label><input type="radio" name="bgSpot" value="北湖・ロックエリア"><span>北湖（ロック）</span></label>
+          <label><input type="radio" name="bgSpot" value="北湖・サーフエリア"><span>北湖（サーフ）</span></label>
+        </div>
+      </div>
+      <label>魚拓に入れるもの <small>（入れたい順にタップ）</small></label>
       <p class="note">タップした順に優先順位（①②③…）がつきます。もう一度タップすると外れます。</p>
       <div class="chips prio">
         <label><input type="checkbox" name="txt" value="魚種" checked><span>魚種</span></label>
@@ -196,9 +211,12 @@
         <label><input type="checkbox" name="txt" value="場所"><span>場所</span></label>
         <label><input type="checkbox" name="txt" value="時刻"><span>時刻</span></label>
         <label><input type="checkbox" name="txt" value="タックル"><span>タックル</span></label>
+        <label><input type="checkbox" name="txt" value="2枚目の写真"><span>2枚目の写真</span></label>
       </div>
+      <p class="note">「2枚目の写真」は、メインの魚の後ろにうっすら、または隅に小さく別の写真を重ねる演出です（見本の左上）。</p>
+      <p class="note" id="subNote" hidden>📷 使ってほしい写真があれば、DMで「2枚目用」と書き添えて送ってください。</p>
       <div class="photo" style="margin-bottom:10px">
-        ⚠️ 魚の形や大きさによっては、レイアウトの都合で<b>すべての文字を入れられない場合があります</b>。そのときは優先順位の高いものから入れます。
+        ⚠️ 魚の形や大きさによっては、レイアウトの都合で<b>すべてを入れられない場合があります</b>。そのときは優先順位の高いものから入れます。
       </div>
       <label>使い道</label>
       <div class="chips">
@@ -262,7 +280,7 @@ const STORE_KEY = 'gyotakuDraft_v1';
 
 const $ = id => document.getElementById(id);
 const f = $('f');
-const textIds = ['species','length','weight','weightUnit','date','hh','mm','time','place','angler','lure','rod','reel','line','memo'];
+const textIds = ['species','length','weight','weightUnit','date','hh','mm','time','bgColor','place','angler','lure','rod','reel','line','memo'];
 
 function radio(name){ const el = f.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; }
 let txtOrder = [];
@@ -322,8 +340,10 @@ function buildText(){
   L.push('');
   L.push('■ 仕上がり');
   add('向き', radio('orient'));
-  add('背景', radio('bg'));
-  add('入れる文字（優先順）', txtOrder.map((x,i)=>CIRCLED[i]+x).join(' ') || 'なし');
+  const bg = radio('bg');
+  add('背景', bg === '単色' ? (v('bgColor') ? `単色（${v('bgColor')}）` : '単色')
+            : bg === '釣り場の写真' ? `釣り場の写真（${radio('bgSpot')}）` : bg);
+  add('入れるもの（優先順）', txtOrder.map((x,i)=>CIRCLED[i]+x).join(' ') || 'なし');
   add('使い道', checks('use').join('・'));
   add('メモ', v('memo'));
   L.push('');
@@ -348,7 +368,7 @@ function save(){
   try{
     const data = {};
     textIds.forEach(id => data[id] = $(id).value);
-    ['orient','bg','photo'].forEach(n => data[n] = radio(n));
+    ['orient','bg','bgSpot','photo'].forEach(n => data[n] = radio(n));
     data.txt = txtOrder;
     data.use = checks('use');
     localStorage.setItem(STORE_KEY, JSON.stringify(data));
@@ -359,7 +379,7 @@ function load(){
     const data = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if(!data) return;
     textIds.forEach(id => { if(data[id] != null) $(id).value = data[id]; });
-    ['orient','bg','photo'].forEach(n => {
+    ['orient','bg','bgSpot','photo'].forEach(n => {
       const el = f.querySelector(`input[name="${n}"][value="${CSS.escape(data[n]||'')}"]`);
       if(el) el.checked = true;
     });
@@ -371,7 +391,12 @@ function load(){
   }catch(e){}
 }
 
-function update(){ $('preview').textContent = buildText(); save(); }
+function toggles(){
+  $('bgColorBox').hidden = radio('bg') !== '単色';
+  $('bgSpotBox').hidden = radio('bg') !== '釣り場の写真';
+  $('subNote').hidden = !txtOrder.includes('2枚目の写真');
+}
+function update(){ toggles(); $('preview').textContent = buildText(); save(); }
 
 function toast(msg){
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
