@@ -53,7 +53,7 @@
   .chips input:focus-visible+span{outline:2px solid var(--sun1)}
   .prio span[data-n]::before{content:attr(data-n);margin-right:4px;font-weight:700}
   .gallery{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -14px 12px;padding:0 14px 4px;-webkit-overflow-scrolling:touch}
-  .gallery a{flex:0 0 88%;scroll-snap-align:center}
+  .gallery a{flex:1 1 100%;scroll-snap-align:center}
   .gallery img,.ideal img{display:block;width:100%;height:auto;border-radius:10px}
   .ideal{margin:10px 0 0}
   .ideal figcaption{font-size:12px;color:var(--sub);text-align:center;margin-top:4px}
@@ -98,11 +98,9 @@
 
   <section class="card">
     <h2>仕上がり見本</h2>
-    <p class="note">横にスワイプで見られます。タップで大きく表示します。</p>
+    <p class="note">タップで大きく表示します。</p>
     <div class="gallery">
       <a href="gyotaku-sample1.jpg" target="_blank"><img src="gyotaku-sample1.jpg" alt="デジタル魚拓の見本1" loading="lazy"></a>
-      <a href="gyotaku-sample2.jpg" target="_blank"><img src="gyotaku-sample2.jpg" alt="デジタル魚拓の見本2" loading="lazy"></a>
-      <a href="gyotaku-sample3.jpg" target="_blank"><img src="gyotaku-sample3.jpg" alt="デジタル魚拓の見本3" loading="lazy"></a>
     </div>
   </section>
 
