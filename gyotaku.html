@@ -108,7 +108,7 @@
     <section class="card">
       <h2><span class="num">1</span>魚のこと</h2>
       <label for="species">魚種</label>
-      <input type="text" id="species" list="speciesList" placeholder="例：ブラックバス">
+      <input type="text" id="species" list="speciesList">
       <datalist id="speciesList">
         <option value="ブラックバス"><option value="スモールマウスバス"><option value="ナマズ">
         <option value="ビワコオオナマズ"><option value="ハス"><option value="ニゴイ">
@@ -117,12 +117,12 @@
       <div class="row">
         <div>
           <label for="length">長さ <small>cm</small></label>
-          <input type="number" id="length" inputmode="decimal" step="0.1" min="0" placeholder="例：52">
+          <input type="number" id="length" inputmode="decimal" step="0.1" min="0">
         </div>
         <div>
           <label for="weight">重さ</label>
           <div class="unit">
-            <input type="number" id="weight" inputmode="decimal" step="0.01" min="0" placeholder="例：2.3">
+            <input type="number" id="weight" inputmode="decimal" step="0.01" min="0">
             <select id="weightUnit" aria-label="重さの単位">
               <option>kg</option><option>g</option><option>lb</option><option>oz</option>
             </select>
@@ -159,9 +159,9 @@
     <section class="card">
       <h2><span class="num">3</span>釣り人・タックル</h2>
       <label for="angler">魚拓に入れる名前 <small>（ニックネーム可）</small></label>
-      <input type="text" id="angler" placeholder="例：びわ太郎">
+      <input type="text" id="angler">
       <label for="lure">ルアー・エサ</label>
-      <input type="text" id="lure" placeholder="例：ノーシンカー 5インチ">
+      <input type="text" id="lure">
       <label for="rod">ロッド</label>
       <input type="text" id="rod">
       <label for="reel">リール</label>
@@ -207,7 +207,7 @@
         <label><input type="checkbox" name="use" value="印刷して飾る"><span>印刷</span></label>
       </div>
       <label for="memo">そのほかの希望・メモ</label>
-      <textarea id="memo" placeholder="例：落款（ハンコ）風の名前にしてほしい／初めての50アップです など"></textarea>
+      <textarea id="memo"></textarea>
     </section>
 
     <section class="card">
