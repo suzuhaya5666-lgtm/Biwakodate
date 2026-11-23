@@ -230,13 +230,13 @@ async function rnRecolor(U){try{const r=await fetch(U);if(!r.ok)throw 0;const bm
  x.putImageData(im,0,0);const b=await new Promise(ok=>c.toBlob(ok));rnRC[U]=URL.createObjectURL(b);
  clearTimeout(rnRT);rnRT=setTimeout(()=>{if(tab==="wx")rnPaintOnly()},150)}catch(e){rnRC[U]=0}}
 function rnImg(k,el){if(k){rnSt.ok++}else{rnSt.ng++;if(!rnSt.bad&&el)rnSt.bad=el.getAttribute("href")}const d=document.getElementById("rnd");if(d)d.innerHTML=rnDiag()}
-function rnDiag(){if(!rnSt.n)return"";return`雨雲画像 ${rnSt.ok}/${rnSt.n}枚読込`+(rnSt.ng?` ・失敗${rnSt.ng}枚 <a href="${rnSt.bad}" target="_blank">失敗した画像を開く</a><br><span style="word-break:break-all;font-size:11px">${rnSt.bad}</span>`:"")}
-function rnSvg(){rnSt={n:0,ok:0,ng:0,bad:""};if(!rnOn)return"";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"";const G=wxGeo(),n=2**RN_Z,{ax,bx,ay,by}=RNA,
+function rnDiag(){if(!rnSt.n)return"";return`雨雲画像 ${rnSt.ok}/${rnSt.n}枚読込 ${Object.values(rnRC).filter(v=>v).length?"(色変えOK)":"(色変えなし)"}<br>${rnSt.u.map(u=>`<img src="${rnRC[u]||u}" style="width:110px;height:110px;border:1px solid #888;background:#fff;margin:2px"><br><span style="word-break:break-all;font-size:10px">${u.slice(RN_B.length)}</span><br>`).join("")}`+(rnSt.ng?` ・失敗${rnSt.ng}枚 <a href="${rnSt.bad}" target="_blank">失敗した画像を開く</a><br><span style="word-break:break-all;font-size:11px">${rnSt.bad}</span>`:"")}
+function rnSvg(){rnSt={n:0,ok:0,ng:0,bad:"",u:[]};if(!rnOn)return"";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"";const G=wxGeo(),n=2**RN_Z,{ax,bx,ay,by}=RNA,
  lo=x=>(x-bx)/ax,mm=y=>(y-by)/ay,tx=l=>(l+180)/360*n,ty=m=>(1-m/Math.PI)/2*n,
  x0=Math.floor(Math.min(tx(lo(-90)),tx(lo(G.W+100)))),x1=Math.floor(Math.max(tx(lo(-90)),tx(lo(G.W+100)))),
  y0=Math.floor(Math.min(ty(mm(-10)),ty(mm(G.H+10)))),y1=Math.floor(Math.max(ty(mm(-10)),ty(mm(G.H+10)))),sx=ax*360/(256*n),sy=-ay*2*Math.PI/(256*n);let o="";
  for(let X=x0;X<=x1;X++)for(let Y=y0;Y<=y1;Y++){const px=ax*(X*360/n-180)+bx,py=ay*(Math.PI-2*Math.PI*Y/n)+by;
-  const U=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`;o+=`<image href="${rnHref(U)}" width="256" height="256" transform="translate(${px.toFixed(2)},${py.toFixed(2)}) scale(${sx.toFixed(5)},${sy.toFixed(5)})" opacity=".75" style="pointer-events:none" onload="rnImg(1)" onerror="rnImg(0,this)"/>`;rnSt.n++}
+  const U=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`;rnSt.u.push(U);o+=`<image href="${rnHref(U)}" width="256" height="256" transform="translate(${px.toFixed(2)},${py.toFixed(2)}) scale(${sx.toFixed(5)},${sy.toFixed(5)})" opacity=".75" style="pointer-events:none" onload="rnImg(1)" onerror="rnImg(0,this)"/>`;rnSt.n++}
  return o}
 function rnLab(){if(!rnOn)return"";if(!rnC)return"雨雲を読み込み中…";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"雨雲データを取得できませんでした";
  const t=new Date(rnMs(f.v)+9*36e5),h=t.getUTCHours(),m=t.getUTCMinutes();return`${h}:${String(m).padStart(2,"0")} ${f.fc?"の予測":"の実況"}`+(rnIdx(F)===F.filter(x=>!x.fc).length-1?"(いま)":"")}
