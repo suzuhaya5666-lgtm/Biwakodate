@@ -207,7 +207,7 @@ function wxWave(){const G=wxGeo(),S=G.S;
 function wcol(h){const st=[[.1,[242,208,75]],[.3,[242,153,74]],[.6,[229,83,61]],[1,[164,22,26]]];if(h<=st[0][0])return`rgb(${st[0][1]})`;
  for(let i=1;i<st.length;i++)if(h<=st[i][0]){const f=(h-st[i-1][0])/(st[i][0]-st[i-1][0]),a=st[i-1][1],b=st[i][1];return`rgb(${a.map((v,q)=>Math.round(v+(b[q]-v)*f))})`}return`rgb(${st[3][1]})`}
 function nowIdx(){const t=wxD&&wxD[0].current.time.slice(0,13),i=wxD?wxD[0].hourly.time.findIndex(x=>x.slice(0,13)===t):-1;return i<0?0:i}
-const RN_B="https://www.jma.go.jp/bosai/jmatile/data/nowc/",RN_Z=9;
+const RN_B="https://www.jma.go.jp/bosai/jmatile/data/nowc/",RN_Z=10;
 let rnOn=(()=>{try{return localStorage.getItem("biwa_rn")!=="0"}catch(e){return true}})(),rnC=null,rnBusy=false,rnAt=0;
 const RNA=(()=>{const f=(v,u)=>{const n=v.length,mv=v.reduce((a,b)=>a+b)/n,mu=u.reduce((a,b)=>a+b)/n;let s=0,q=0;v.forEach((x,i)=>{s+=(x-mv)*(u[i]-mu);q+=(x-mv)**2});const a=s/q;return[a,mu-a*mv]};
  const my=la=>Math.log(Math.tan(Math.PI/4+la*Math.PI/360)),X=f(WXP.map(p=>p[2]),WXP.map(p=>p[4])),Y=f(WXP.map(p=>my(p[1])),WXP.map(p=>p[5]));return{ax:X[0],bx:X[1],ay:Y[0],by:Y[1]}})();
