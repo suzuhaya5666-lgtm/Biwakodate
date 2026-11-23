@@ -221,14 +221,22 @@ function rnFrames(){if(!rnC||!rnC.n1.length)return[];const l=rnMs(rnC.n1[0].vali
  return rnC.n1.slice().reverse().map(f=>({b:f.basetime,v:f.validtime,fc:0})).concat(rnC.n2.slice().reverse().filter(f=>rnMs(f.validtime)>l).map(f=>({b:f.basetime,v:f.validtime,fc:1})))}
 function rnIdx(F){F=F||rnFrames();let i=rnSel?F.findIndex(f=>f.v===rnSel):-1;if(i<0)i=F.filter(f=>!f.fc).length-1;return i}
 let rnSt={n:0,ok:0,ng:0,bad:""};
-function rnImg(k,el){if(k){rnSt.ok++;const g=document.getElementById("wxr");if(g&&!g.getAttribute("filter"))g.setAttribute("filter","url(#rnf)")}else{rnSt.ng++;if(!rnSt.bad&&el)rnSt.bad=el.getAttribute("href")}const d=document.getElementById("rnd");if(d)d.innerHTML=rnDiag()}
+const rnRC={},rnRW={};let rnRT=null;
+function rnHref(U){if(rnRC[U])return rnRC[U];if(!rnRW[U]&&rnRC[U]!==0){rnRW[U]=1;rnRecolor(U)}return U}
+async function rnRecolor(U){try{const r=await fetch(U);if(!r.ok)throw 0;const bm=await createImageBitmap(await r.blob()),c=document.createElement("canvas");c.width=bm.width;c.height=bm.height;
+ const x=c.getContext("2d");x.drawImage(bm,0,0);const im=x.getImageData(0,0,c.width,c.height),d=im.data;
+ for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const R=d[i],G=d[i+1],B=d[i+2];if(B<200)continue;
+  if(R>200&&G>200){d[i]=140;d[i+1]=215;d[i+2]=110;d[i+3]=255}else if(R>110&&G>170){d[i]=30;d[i+1]=160;d[i+2]=60;d[i+3]=255}}
+ x.putImageData(im,0,0);const b=await new Promise(ok=>c.toBlob(ok));rnRC[U]=URL.createObjectURL(b);
+ clearTimeout(rnRT);rnRT=setTimeout(()=>{if(tab==="wx")rnPaintOnly()},150)}catch(e){rnRC[U]=0}}
+function rnImg(k,el){if(k){rnSt.ok++}else{rnSt.ng++;if(!rnSt.bad&&el)rnSt.bad=el.getAttribute("href")}const d=document.getElementById("rnd");if(d)d.innerHTML=rnDiag()}
 function rnDiag(){if(!rnSt.n)return"";return`雨雲画像 ${rnSt.ok}/${rnSt.n}枚読込`+(rnSt.ng?` ・失敗${rnSt.ng}枚 <a href="${rnSt.bad}" target="_blank">失敗した画像を開く</a><br><span style="word-break:break-all;font-size:11px">${rnSt.bad}</span>`:"")}
 function rnSvg(){rnSt={n:0,ok:0,ng:0,bad:""};if(!rnOn)return"";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"";const G=wxGeo(),n=2**RN_Z,{ax,bx,ay,by}=RNA,
  lo=x=>(x-bx)/ax,mm=y=>(y-by)/ay,tx=l=>(l+180)/360*n,ty=m=>(1-m/Math.PI)/2*n,
  x0=Math.floor(Math.min(tx(lo(-90)),tx(lo(G.W+100)))),x1=Math.floor(Math.max(tx(lo(-90)),tx(lo(G.W+100)))),
  y0=Math.floor(Math.min(ty(mm(-10)),ty(mm(G.H+10)))),y1=Math.floor(Math.max(ty(mm(-10)),ty(mm(G.H+10)))),sx=ax*360/(256*n),sy=-ay*2*Math.PI/(256*n);let o="";
  for(let X=x0;X<=x1;X++)for(let Y=y0;Y<=y1;Y++){const px=ax*(X*360/n-180)+bx,py=ay*(Math.PI-2*Math.PI*Y/n)+by;
-  o+=`<image href="${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png" width="256" height="256" transform="translate(${px.toFixed(2)},${py.toFixed(2)}) scale(${sx.toFixed(5)},${sy.toFixed(5)})" opacity=".75" style="pointer-events:none" onload="rnImg(1)" onerror="rnImg(0,this)"/>`;rnSt.n++}
+  const U=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`;o+=`<image href="${rnHref(U)}" width="256" height="256" transform="translate(${px.toFixed(2)},${py.toFixed(2)}) scale(${sx.toFixed(5)},${sy.toFixed(5)})" opacity=".75" style="pointer-events:none" onload="rnImg(1)" onerror="rnImg(0,this)"/>`;rnSt.n++}
  return o}
 function rnLab(){if(!rnOn)return"";if(!rnC)return"雨雲を読み込み中…";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"雨雲データを取得できませんでした";
  const t=new Date(rnMs(f.v)+9*36e5),h=t.getUTCHours(),m=t.getUTCMinutes();return`${h}:${String(m).padStart(2,"0")} ${f.fc?"の予測":"の実況"}`+(rnIdx(F)===F.filter(x=>!x.fc).length-1?"(いま)":"")}
@@ -266,7 +274,7 @@ function wx(){
  if(wxD&&!wxW){try{wxW=wxWave()}catch(e){wxW=null}}
  if(wxD&&(wxK<0||wxK>=wxD[0].hourly.time.length))wxK=nowIdx();
  const G=wxGeo(),W=G.W,H=G.H,N=wxD?wxD[0].hourly.time.length:1,K=Math.max(0,wxK);
- const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><defs><filter id="rnf" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 1 0 0" result="bA"/><feComponentTransfer in="bA" result="bM"><feFuncA type="discrete" tableValues="0 1"/></feComponentTransfer><feColorMatrix in="SourceGraphic" type="matrix" values="0 1 0 0 0  0 1 0 0 0  0 1 0 0 0  0 0 0 1 0" result="gg"/><feComponentTransfer in="gg" result="rc"><feFuncR type="discrete" tableValues="0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.129 0.129 0.129 0.129 0.129 0.118 0.118 0.118 0.118 0.118 0.549 0.549"/><feFuncG type="discrete" tableValues="0.255 0.255 0.255 0.255 0.255 0.255 0.255 0.255 0.549 0.549 0.549 0.549 0.549 0.627 0.627 0.627 0.627 0.627 0.843 0.843"/><feFuncB type="discrete" tableValues="1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 0.235 0.235 0.235 0.235 0.235 0.431 0.431"/></feComponentTransfer><feComposite in="rc" in2="bM" operator="in" result="bn"/><feComposite in="SourceGraphic" in2="bM" operator="out" result="rest"/><feMerge><feMergeNode in="rest"/><feMergeNode in="bn"/></feMerge></filter></defs><g id="wxr">${rnSvg()}</g><g id="wxs">${shoreSvg(K)}</g><g id="wxp">${pinsSvg(K)}</g>`;
+ const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxr">${rnSvg()}</g><g id="wxs">${shoreSvg(K)}</g><g id="wxp">${pinsSvg(K)}</g>`;
  let sh="";
  if(wxSel>=0&&wxD&&wxD[wxSel]){const D=wxD[wxSel],c=D.current,hh=D.hourly,ds=D.daily,nowH=c.time.slice(0,13),td=c.time.slice(0,10),nm=WXP[wxSel][0];
   const DL={"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"},dl=day=>DL[Math.round((new Date(day)-new Date(td))/864e5)]||day,wd=day=>"日月火水木金土"[new Date(day+"T00:00").getDay()];
