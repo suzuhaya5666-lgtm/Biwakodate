@@ -263,7 +263,7 @@ function wx(){
  if(wxD&&!wxW){try{wxW=wxWave()}catch(e){wxW=null}}
  if(wxD&&(wxK<0||wxK>=wxD[0].hourly.time.length))wxK=nowIdx();
  const G=wxGeo(),W=G.W,H=G.H,N=wxD?wxD[0].hourly.time.length:1,K=Math.max(0,wxK);
- const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxr">${rnSvg()}</g><g id="wxs">${shoreSvg(K)}</g><g id="wxp">${pinsSvg(K)}</g>`;
+ const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><defs><filter id="rnf" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 1 0 0" result="bA"/><feComponentTransfer in="bA" result="bM"><feFuncA type="discrete" tableValues="0 1"/></feComponentTransfer><feColorMatrix in="SourceGraphic" type="matrix" values="0 1 0 0 0  0 1 0 0 0  0 1 0 0 0  0 0 0 1 0" result="gg"/><feComponentTransfer in="gg" result="rc"><feFuncR type="discrete" tableValues="0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.129 0.129 0.129 0.129 0.129 0.118 0.118 0.118 0.118 0.118 0.549 0.549"/><feFuncG type="discrete" tableValues="0.255 0.255 0.255 0.255 0.255 0.255 0.255 0.255 0.549 0.549 0.549 0.549 0.549 0.627 0.627 0.627 0.627 0.627 0.843 0.843"/><feFuncB type="discrete" tableValues="1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 0.235 0.235 0.235 0.235 0.235 0.431 0.431"/></feComponentTransfer><feComposite in="rc" in2="bM" operator="in" result="bn"/><feComposite in="SourceGraphic" in2="bM" operator="out" result="rest"/><feMerge><feMergeNode in="rest"/><feMergeNode in="bn"/></feMerge></filter></defs><g id="wxr" filter="url(#rnf)">${rnSvg()}</g><g id="wxs">${shoreSvg(K)}</g><g id="wxp">${pinsSvg(K)}</g>`;
  let sh="";
  if(wxSel>=0&&wxD&&wxD[wxSel]){const D=wxD[wxSel],c=D.current,hh=D.hourly,ds=D.daily,nowH=c.time.slice(0,13),td=c.time.slice(0,10),nm=WXP[wxSel][0];
   const DL={"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"},dl=day=>DL[Math.round((new Date(day)-new Date(td))/864e5)]||day,wd=day=>"日月火水木金土"[new Date(day+"T00:00").getDay()];
@@ -289,14 +289,14 @@ function wx(){
   ${rnCtl()}
   <p class="note"><span style="color:#f2d04b">━</span>〜0.2m <span style="color:#f2994a">━</span>0.3m <span style="color:#e5533d">━</span>0.6m <span style="color:#a4161a">━</span>1m以上(風の吹き寄せる岸の波高の目安)。風がやんでも、約4時間かけて薄くなります。風の予報から計算した推定で、実測ではありません。安全の判断には使わないでください。</p>
   <div class="row"><button id="wmv" class="${wxNew?"pri":""}">新マップ ${wxNew?"オン":"オフ"}</button></div>
-  <p class="note">天気: Open-Meteo(予報モデルの値)。雨雲: 気象庁の高解像度降水ナウキャスト(水色=弱い、黄・橙・赤=強い)。${wxAt?"取得 "+new Date(wxAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""} <button id="wxr">更新</button> ${wxBusy?"読み込み中…":""} ${esc(wxErr)}</p></div>${sh}`;
+  <p class="note">天気: Open-Meteo(予報モデルの値)。雨雲: 気象庁の高解像度降水ナウキャスト(薄緑=1mm/h未満、緑=1〜5mm、青=5〜20mm、黄・橙・赤=強い)。${wxAt?"取得 "+new Date(wxAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""} <button id="wxu">更新</button> ${wxBusy?"読み込み中…":""} ${esc(wxErr)}</p></div>${sh}`;
  {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}}}
  {const sl=$("#wsl");if(sl){sl.oninput=e=>{wxK=+e.target.value;wxPaint()};
   $("#wnow").onclick=()=>{wxK=nowIdx();wxPaint()};$("#wm").onclick=()=>{wxK=Math.max(0,wxK-1);wxPaint()};$("#wp").onclick=()=>{wxK=Math.min(N-1,wxK+1);wxPaint()};
   $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};if($("#wsb"))$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};$("#wmv").onclick=()=>{wxNew=!wxNew;try{localStorage.setItem("biwa_mv",wxNew?"new":"old")}catch(e){}wx()};{rnBind();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;try{localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
  {const c=$("#wxc");if(c)c.onclick=()=>{wxSel=-1;wx()}}
  {const h=$("#wmh"),d=$("#wmd");if(h){h.onclick=()=>{wxMode="h";wx()};d.onclick=()=>{wxMode="d";wx()}}}
- {const r=$("#wxr");if(r)r.onclick=()=>{wxAt=0;loadWx()}}
+ {const r=$("#wxu");if(r)r.onclick=()=>{wxAt=0;loadWx()}}
  {const c=$("#wxcn"),f=$(".tb");if(c&&f)f.scrollTop=Math.max(0,c.offsetTop-f.clientHeight/3)}
  if(wxSel>=0){const e=$("#v-wx").querySelectorAll("g.pin")[wxSel];if(e&&e.getBoundingClientRect){const b=e.getBoundingClientRect().bottom,lim=innerHeight*.42;if(b>lim)scrollBy(0,b-lim+10)}}
 }
