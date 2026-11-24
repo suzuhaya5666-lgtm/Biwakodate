@@ -221,14 +221,6 @@ function rnFrames(){if(!rnC||!rnC.n1.length)return[];const l=rnMs(rnC.n1[0].vali
  return rnC.n1.slice().reverse().map(f=>({b:f.basetime,v:f.validtime,fc:0})).concat(rnC.n2.slice().reverse().filter(f=>rnMs(f.validtime)>l).map(f=>({b:f.basetime,v:f.validtime,fc:1})))}
 function rnIdx(F){F=F||rnFrames();let i=rnSel?F.findIndex(f=>f.v===rnSel):-1;if(i<0)i=F.filter(f=>!f.fc).length-1;return i}
 let rnSt={n:0,ok:0,ng:0,bad:""};
-const rnRC={},rnRW={};let rnRT=null;
-function rnHref(U){if(rnRC[U])return rnRC[U];if(!rnRW[U]&&rnRC[U]!==0){rnRW[U]=1;rnRecolor(U)}return U}
-async function rnRecolor(U){try{const r=await fetch(U);if(!r.ok)throw 0;const bm=await createImageBitmap(await r.blob()),c=document.createElement("canvas");c.width=bm.width;c.height=bm.height;
- const x=c.getContext("2d");x.drawImage(bm,0,0);const im=x.getImageData(0,0,c.width,c.height),d=im.data;
- for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const R=d[i],G=d[i+1],B=d[i+2];if(B<200)continue;
-  if(R>200&&G>200){d[i]=140;d[i+1]=215;d[i+2]=110;d[i+3]=255}else if(R>110&&G>170){d[i]=30;d[i+1]=160;d[i+2]=60;d[i+3]=255}}
- x.putImageData(im,0,0);const b=await new Promise(ok=>c.toBlob(ok));rnRC[U]=URL.createObjectURL(b);
- clearTimeout(rnRT);rnRT=setTimeout(()=>{if(tab==="wx")rnPaintOnly()},150)}catch(e){rnRC[U]=0}}
 function rnImg(k,el){if(k){rnSt.ok++}else{rnSt.ng++;if(!rnSt.bad&&el)rnSt.bad=el.getAttribute("href")}const d=document.getElementById("rnd");if(d)d.innerHTML=rnDiag()}
 function rnDiag(){return""}
 function rnSvg(){rnSt={n:0,ok:0,ng:0,bad:"",u:[]};if(!rnOn)return"";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"";const G=wxGeo(),n=2**RN_Z,{ax,bx,ay,by}=RNA,
@@ -236,7 +228,7 @@ function rnSvg(){rnSt={n:0,ok:0,ng:0,bad:"",u:[]};if(!rnOn)return"";const F=rnFr
  x0=Math.floor(Math.min(tx(lo(-90)),tx(lo(G.W+100)))),x1=Math.floor(Math.max(tx(lo(-90)),tx(lo(G.W+100))))+1,
  y0=Math.floor(Math.min(ty(mm(-10)),ty(mm(G.H+10)))),y1=Math.floor(Math.max(ty(mm(-10)),ty(mm(G.H+10)))),sx=ax*360/(256*n),sy=-ay*2*Math.PI/(256*n);let o="";
  for(let X=x0;X<=x1;X++)for(let Y=y0;Y<=y1;Y++){const px=ax*(X*360/n-180)+bx,py=ay*(Math.PI-2*Math.PI*Y/n)+by;
-  const U=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`;rnSt.u.push(U);o+=`<image href="${rnHref(U)}" width="256" height="256" transform="translate(${px.toFixed(2)},${py.toFixed(2)}) scale(${sx.toFixed(5)},${sy.toFixed(5)})" opacity=".75" style="pointer-events:none" onload="rnImg(1)" onerror="rnImg(0,this)"/>`;rnSt.n++}
+  const U=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`;rnSt.u.push(U);o+=`<image href="${U}" width="256" height="256" transform="translate(${px.toFixed(2)},${py.toFixed(2)}) scale(${sx.toFixed(5)},${sy.toFixed(5)})" opacity=".75" style="pointer-events:none" onload="rnImg(1)" onerror="rnImg(0,this)"/>`;rnSt.n++}
  return o}
 function rnLab(){if(!rnOn)return"";if(!rnC)return"雨雲を読み込み中…";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"雨雲データを取得できませんでした";
  const t=new Date(rnMs(f.v)+9*36e5),h=t.getUTCHours(),m=t.getUTCMinutes();return`${h}:${String(m).padStart(2,"0")} ${f.fc?"の予測":"の実況"}`+(rnIdx(F)===F.filter(x=>!x.fc).length-1?"(いま)":"")}
@@ -300,7 +292,7 @@ function wx(){
   ${rnCtl()}
   <p class="note"><span style="color:#f2d04b">━</span>〜0.2m <span style="color:#f2994a">━</span>0.3m <span style="color:#e5533d">━</span>0.6m <span style="color:#a4161a">━</span>1m以上(風の吹き寄せる岸の波高の目安)。風がやんでも、約4時間かけて薄くなります。風の予報から計算した推定で、実測ではありません。安全の判断には使わないでください。</p>
   <div class="row"><button id="wmv" class="${wxNew?"pri":""}">新マップ ${wxNew?"オン":"オフ"}</button></div>
-  <p class="note">天気: Open-Meteo(予報モデルの値)。雨雲: 気象庁の高解像度降水ナウキャスト(薄緑=1mm/h未満、緑=1〜5mm、青=5〜20mm、黄・橙・赤=強い)。${wxAt?"取得 "+new Date(wxAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""} <button id="wxu">更新</button> ${wxBusy?"読み込み中…":""} ${esc(wxErr)}</p></div>${sh}`;
+  <p class="note">天気: Open-Meteo(予報モデルの値)。雨雲: 気象庁の高解像度降水ナウキャスト(水色=弱い、青=やや強い、黄・橙・赤=強い)。${wxAt?"取得 "+new Date(wxAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""} <button id="wxu">更新</button> ${wxBusy?"読み込み中…":""} ${esc(wxErr)}</p></div>${sh}`;
  {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}}}
  {const sl=$("#wsl");if(sl){sl.oninput=e=>{wxK=+e.target.value;wxPaint()};
   $("#wnow").onclick=()=>{wxK=nowIdx();wxPaint()};$("#wm").onclick=()=>{wxK=Math.max(0,wxK-1);wxPaint()};$("#wp").onclick=()=>{wxK=Math.min(N-1,wxK+1);wxPaint()};
