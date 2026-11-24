@@ -245,10 +245,10 @@ const MUNI={"25201":"大津市","25202":"彦根市","25203":"長浜市","25204":
  "26101":"京都市北区","26102":"京都市上京区","26103":"京都市左京区","26104":"京都市中京区","26105":"京都市東山区","26106":"京都市下京区","26107":"京都市南区","26108":"京都市右京区","26109":"京都市伏見区","26110":"京都市山科区","26111":"京都市西京区","18202":"敦賀市"},GSIC={};
 function tapLL(e,sv){const m=sv.getScreenCTM();if(!m)return null;const q=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse()),lo=(q.x-RNA.bx)/RNA.ax,mm=(q.y-RNA.by)/RNA.ay;return{la:(2*Math.atan(Math.exp(mm))-Math.PI/2)*180/Math.PI,lo}}
 async function gsiName(la,lo){const k=la.toFixed(3)+","+lo.toFixed(3);if(k in GSIC)return GSIC[k];let n=null;
- try{const r=await fetch(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${la.toFixed(5)}&lon=${lo.toFixed(5)}`);if(!r.ok)return undefined;const j=await r.json(),x=j&&j.results;if(x){const m=MUNI[x.muniCd]||"",t=(x.lv01Nm||"").replace(/^－$/,"");n=(m+t)||null}}catch(e){return undefined}
+ try{const r=await fetch(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${la.toFixed(5)}&lon=${lo.toFixed(5)}`);if(!r.ok)return undefined;const j=await r.json(),x=j&&j.results;if(x){const m=MUNI[x.muniCd]||"",t=(x.lv01Nm||"").replace(/^[\-－−ー‐―\s]+$/,"");n=t?m+t+"付近":m?m+"沖":null}}catch(e){return undefined}
  GSIC[k]=n;return n}
 async function tipPlace(e,sv,el,txt){const p=tapLL(e,sv);if(!p)return;const n=await gsiName(p.la,p.lo);if(n===undefined||document.getElementById("wftip")!==el||el.firstChild.textContent!==txt)return;
- el.innerHTML=`<div>${txt}</div><div style="font-size:11px;font-weight:400;margin-top:2px">${n?n+"付近":"湖上"}</div>`}
+ el.innerHTML=`<div>${txt}</div><div style="font-size:11px;font-weight:400;margin-top:2px">${n||"湖上"}</div>`}
 function mapTip(e,sv,txt){const box=sv.parentNode,r=box.getBoundingClientRect();let el=document.getElementById("wftip");if(!el){el=document.createElement("div");el.id="wftip";box.appendChild(el)}
  el.style.cssText=`position:absolute;left:${e.clientX-r.left}px;top:${e.clientY-r.top}px;transform:translate(-50%,-125%);background:rgba(30,30,30,.82);color:#fff;font-size:13px;font-weight:700;padding:5px 9px;border-radius:8px;white-space:nowrap;pointer-events:none;z-index:5`;
  el.innerHTML=`<div>${txt}</div>`;tipPlace(e,sv,el,txt);let dt=document.getElementById("wfdot");if(!dt){dt=document.createElement("div");dt.id="wfdot";box.appendChild(dt)}
