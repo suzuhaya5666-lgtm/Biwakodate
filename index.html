@@ -224,7 +224,7 @@ let rnSt={n:0,ok:0,ng:0,bad:""};
 function rnImg(k,el){if(k){rnSt.ok++}else{rnSt.ng++;if(!rnSt.bad&&el)rnSt.bad=el.getAttribute("href")}const d=document.getElementById("rnd");if(d)d.innerHTML=rnDiag()}
 function rnDiag(){return""}
 let wfOn=(()=>{try{return localStorage.getItem("biwa_wf")!=="0"&&localStorage.getItem("biwa_rn")==="0"}catch(e){return false}})(),wfF=null,wfRaf=0,wfPt=[],wfImg="";
-let wgD=null,wgAt=0;
+let wgD=null,wgAt=0,wpOn=(()=>{try{return localStorage.getItem("biwa_wp")!=="0"}catch(e){return true}})();
 async function wgLoad(){if(Date.now()-wgAt<20*60e3)return;wgAt=Date.now();try{const r=await fetch("data/wind_grid.json?t="+Date.now());if(r.ok){wgD=await r.json();if(tab==="wx"&&wfOn)wxPaint()}}catch(e){}}
 function wfBuild(k){if(!wxD){wfF=null;return}const P=[],tk=wxD[0].hourly.time[k],gi=wgD&&wgD.time?wgD.time.indexOf(tk):-1;let E=1500;
  if(gi>=0){E=400;const my=la=>Math.log(Math.tan(Math.PI/4+la*Math.PI/360));wgD.p.forEach((q,i)=>{const sp=wgD.s[i][gi],dd=wgD.d[i][gi];if(sp==null||dd==null)return;const d=dd*Math.PI/180;P.push([RNA.ax*q[1]+RNA.bx,RNA.ay*my(q[0])+RNA.by,sp,-Math.sin(d),Math.cos(d)])})}
@@ -307,7 +307,7 @@ function pinsSvg(k){const G=wxGeo();let g="";
 function wxLab(k){if(!wxD)return"";const t=wxD[0].hourly.time[k],td=wxD[0].current.time.slice(0,10),dd=Math.round((new Date(t.slice(0,10))-new Date(td))/864e5),n=nowIdx();
  return`${{"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"}[dd]||t.slice(5,10)} ${+t.slice(11,13)}時 ${k===n?"(いま)":k<n?"(過去)":"(予報)"}`}
 function wxPaint(){if(!wxD)return;const k=wxK;if(wfOn){wfBuild(k);const f=$("#wxf");if(f)f.innerHTML=wfSvg();if(!wfRaf)wfStart()}
- const a=$("#wxs"),b=$("#wxp"),l=$("#wlab"),sl=$("#wsl");rnPaintOnly();if(a)a.innerHTML=shoreSvg(k);if(b)b.innerHTML=pinsSvg(k);if(l)l.textContent=wxLab(k);if(sl)sl.value=k}
+ const a=$("#wxs"),b=$("#wxp"),l=$("#wlab"),sl=$("#wsl");rnPaintOnly();if(a)a.innerHTML=shoreSvg(k);if(b)b.innerHTML=wpOn?pinsSvg(k):"";if(l)l.textContent=wxLab(k);if(sl)sl.value=k}
 function wx(){
  rnStop();loadTn();loadRn();if(wfOn)wgLoad();
  if((!wxD||Date.now()-wxAt>15*60e3)&&Date.now()-wxTry>60e3)loadWx();
@@ -315,7 +315,7 @@ function wx(){
  if(wxD&&(wxK<0||wxK>=wxD[0].hourly.time.length))wxK=nowIdx();
  const G=wxGeo(),W=G.W,H=G.H,N=wxD?wxD[0].hourly.time.length:1,K=Math.max(0,wxK);
  if(wfOn)wfBuild(K);
- const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxf">${wfSvg()}</g><g id="wxr">${rnSvg()}</g>${rnOn?`<path d="${G.d}Z" fill="none" stroke="#2f6fae" stroke-width="3" stroke-linejoin="round" style="pointer-events:none"/>`:""}<g id="wxs">${shoreSvg(K)}</g><g id="wxp">${pinsSvg(K)}</g>`;
+ const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxf">${wfSvg()}</g><g id="wxr">${rnSvg()}</g>${rnOn?`<path d="${G.d}Z" fill="none" stroke="#2f6fae" stroke-width="3" stroke-linejoin="round" style="pointer-events:none"/>`:""}<g id="wxs">${shoreSvg(K)}</g><g id="wxp">${wpOn?pinsSvg(K):""}</g>`;
  let sh="";
  if(wxSel>=0&&wxD&&wxD[wxSel]){const D=wxD[wxSel],c=D.current,hh=D.hourly,ds=D.daily,nowH=c.time.slice(0,13),td=c.time.slice(0,10),nm=WXP[wxSel][0];
   const DL={"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"},dl=day=>DL[Math.round((new Date(day)-new Date(td))/864e5)]||day,wd=day=>"日月火水木金土"[new Date(day+"T00:00").getDay()];
@@ -338,7 +338,7 @@ function wx(){
   <div class="tb">${body}</div>${tnD?TNNOTE:""}</div></div>`}
  $("#v-wx").innerHTML=`<div id="wxm" class="${sh?"op":""}"><div style="position:relative"><svg viewBox="${!wxNew?`-90 -10 ${W+190} ${H+20}`:wxSouth?`-75 ${(505-145*(H+20)*1.1/((W+190)*1.1+45)*(290/290)).toFixed(1)} 290 ${(290*(H+20)*1.1/((W+190)*1.1+45)).toFixed(1)}`:`${-90-(W+190)*.05} ${-10-(H+20)*.05} ${(W+190)*1.1+45} ${(H+20)*1.1}`}" style="background:var(--land);border-radius:12px">${g}</svg>${wfOn?`<canvas id="wfc" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;border-radius:12px"></canvas>`:""}${rnLeg()}${wxNew?`<button id="wsb" class="${wxSouth?"pri":""}" style="position:absolute;right:10px;bottom:10px">${wxSouth?"全体に戻す":"南湖拡大"}</button>`:""}</div>
   <div class="row" style="margin-top:8px"><button id="wnow">いま</button><button id="wm">−1時間</button><input type="range" id="wsl" min="0" max="${N-1}" value="${K}" style="flex:1;min-width:120px"><button id="wp">+1時間</button></div>
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b id="wlab">${wxLab(K)}</b><button id="wwv" class="${wxOn?"pri":""}">荒れの目安 ${wxOn?"表示中":"非表示"}</button><button id="wrn" class="${rnOn?"pri":""}">雨雲 ${rnOn?"表示中":"非表示"}</button><button id="wwf" class="${wfOn?"pri":""}">風マップ ${wfOn?"表示中":"非表示"}</button></div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b id="wlab">${wxLab(K)}</b><button id="wwv" class="${wxOn?"pri":""}">荒れの目安 ${wxOn?"表示中":"非表示"}</button><button id="wwp" class="${wpOn?"pri":""}">天気記号 ${wpOn?"表示中":"非表示"}</button><button id="wrn" class="${rnOn?"pri":""}">雨雲 ${rnOn?"表示中":"非表示"}</button><button id="wwf" class="${wfOn?"pri":""}">風マップ ${wfOn?"表示中":"非表示"}</button></div>
   ${rnCtl()}
   <p class="note"><span style="color:#f2d04b">━</span>〜0.2m <span style="color:#f2994a">━</span>0.3m <span style="color:#e5533d">━</span>0.6m <span style="color:#a4161a">━</span>1m以上(風の吹き寄せる岸の波高の目安)。風がやんでも、約4時間かけて薄くなります。風の予報から計算した推定で、実測ではありません。安全の判断には使わないでください。</p>
   <div class="row"><button id="wmv" class="${wxNew?"pri":""}">新マップ ${wxNew?"オン":"オフ"}</button></div>
@@ -346,7 +346,7 @@ function wx(){
  {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}}}
  {const sl=$("#wsl");if(sl){sl.oninput=e=>{wxK=+e.target.value;wxPaint()};
   $("#wnow").onclick=()=>{wxK=nowIdx();wxPaint()};$("#wm").onclick=()=>{wxK=Math.max(0,wxK-1);wxPaint()};$("#wp").onclick=()=>{wxK=Math.min(N-1,wxK+1);wxPaint()};
-  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};if($("#wsb"))$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};$("#wmv").onclick=()=>{wxNew=!wxNew;try{localStorage.setItem("biwa_mv",wxNew?"new":"old")}catch(e){}wx()};{wfStart();{const b=$("#wwf");if(b)b.onclick=()=>{wfOn=!wfOn;if(wfOn){rnStop();rnOn=false}try{localStorage.setItem("biwa_wf",wfOn?"1":"0");localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}wfStop();wx()}}rnBind();rnPt();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;if(rnOn){wfOn=false;wfStop()}try{localStorage.setItem("biwa_rn",rnOn?"1":"0");localStorage.setItem("biwa_wf",wfOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
+  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};if($("#wsb"))$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};$("#wmv").onclick=()=>{wxNew=!wxNew;try{localStorage.setItem("biwa_mv",wxNew?"new":"old")}catch(e){}wx()};{wfStart();{const b=$("#wwp");if(b)b.onclick=()=>{wpOn=!wpOn;if(!wpOn)wxSel=-1;try{localStorage.setItem("biwa_wp",wpOn?"1":"0")}catch(e){}wfStop();wx()}}{const b=$("#wwf");if(b)b.onclick=()=>{wfOn=!wfOn;if(wfOn){rnStop();rnOn=false}try{localStorage.setItem("biwa_wf",wfOn?"1":"0");localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}wfStop();wx()}}rnBind();rnPt();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;if(rnOn){wfOn=false;wfStop()}try{localStorage.setItem("biwa_rn",rnOn?"1":"0");localStorage.setItem("biwa_wf",wfOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
  {const c=$("#wxc");if(c)c.onclick=()=>{wxSel=-1;wx()}}
  {const h=$("#wmh"),d=$("#wmd");if(h){h.onclick=()=>{wxMode="h";wx()};d.onclick=()=>{wxMode="d";wx()}}}
  {const r=$("#wxu");if(r)r.onclick=()=>{wxAt=0;loadWx()}}
