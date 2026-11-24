@@ -243,7 +243,9 @@ function wfTip(e,sv){const m=sv.getScreenCTM();if(!m)return;const q=new DOMPoint
  mapTip(e,sv,`${dirN(d)} ${sp.toFixed(1)}m/s`)}
 function mapTip(e,sv,txt){const box=sv.parentNode,r=box.getBoundingClientRect();let el=document.getElementById("wftip");if(!el){el=document.createElement("div");el.id="wftip";box.appendChild(el)}
  el.style.cssText=`position:absolute;left:${e.clientX-r.left}px;top:${e.clientY-r.top}px;transform:translate(-50%,-125%);background:rgba(30,30,30,.82);color:#fff;font-size:13px;font-weight:700;padding:5px 9px;border-radius:8px;white-space:nowrap;pointer-events:none;z-index:5`;
- el.textContent=txt;clearTimeout(el._t);el._t=setTimeout(()=>el.remove(),4000)}
+ el.textContent=txt;let dt=document.getElementById("wfdot");if(!dt){dt=document.createElement("div");dt.id="wfdot";box.appendChild(dt)}
+ dt.style.cssText=`position:absolute;left:${e.clientX-r.left}px;top:${e.clientY-r.top}px;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#fff;border:2px solid #222;box-sizing:border-box;pointer-events:none;z-index:5`;
+ clearTimeout(el._t);el._t=setTimeout(()=>{el.remove();dt.remove()},4000)}
 async function rnTip(e,sv){const m=sv.getScreenCTM();if(!m)return;const q=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse()),lo=(q.x-RNA.bx)/RNA.ax,mm=(q.y-RNA.by)/RNA.ay,la=(2*Math.atan(Math.exp(mm))-Math.PI/2)*180/Math.PI;
  mapTip(e,sv,"…");const v=await rnAtLL(la,lo);mapTip(e,sv,v===undefined?"雨雲を読めません":v==null?"雨なし":RNL[v])}
 function wfStop(){if(wfRaf)cancelAnimationFrame(wfRaf);wfRaf=0}
