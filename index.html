@@ -266,7 +266,7 @@ function wx(){
  if(wxD&&!wxW){try{wxW=wxWave()}catch(e){wxW=null}}
  if(wxD&&(wxK<0||wxK>=wxD[0].hourly.time.length))wxK=nowIdx();
  const G=wxGeo(),W=G.W,H=G.H,N=wxD?wxD[0].hourly.time.length:1,K=Math.max(0,wxK);
- const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxr">${rnSvg()}</g><g id="wxs">${shoreSvg(K)}</g><g id="wxp">${pinsSvg(K)}</g>`;
+ const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxr">${rnSvg()}</g>${rnOn?`<path d="${G.d}Z" fill="none" stroke="#2f6fae" stroke-width="3" stroke-linejoin="round" style="pointer-events:none"/>`:""}<g id="wxs">${shoreSvg(K)}</g><g id="wxp">${pinsSvg(K)}</g>`;
  let sh="";
  if(wxSel>=0&&wxD&&wxD[wxSel]){const D=wxD[wxSel],c=D.current,hh=D.hourly,ds=D.daily,nowH=c.time.slice(0,13),td=c.time.slice(0,10),nm=WXP[wxSel][0];
   const DL={"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"},dl=day=>DL[Math.round((new Date(day)-new Date(td))/864e5)]||day,wd=day=>"日月火水木金土"[new Date(day+"T00:00").getDay()];
