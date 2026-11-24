@@ -132,6 +132,37 @@ def collect_forecast_cache():
     print("weather_now.json を更新しました")
 
 
+# 風マップ用: 琵琶湖とその周り(湖から5km以内)を5km間隔に区切った地点の風(毎時)。data/wind_grid.json に保存
+WIND_GRID = [[34.9563, 135.8928], [34.9563, 135.9478], [35.0014, 135.8378], [35.0014, 135.8928], [35.0014, 135.9478], [35.0465, 135.8378], [35.0465, 135.8928], [35.0465, 135.9478], [35.0915, 135.8378], [35.0915, 135.8928], [35.0915, 135.9478], [35.0915, 136.0027], [35.1366, 135.8928], [35.1366, 135.9478], [35.1366, 136.0027], [35.1366, 136.0577], [35.1366, 136.1127], [35.1817, 135.8928], [35.1817, 135.9478], [35.1817, 136.0027], [35.1817, 136.0577], [35.1817, 136.1127], [35.2267, 135.8928], [35.2267, 135.9478], [35.2267, 136.0027], [35.2267, 136.0577], [35.2267, 136.1127], [35.2267, 136.1676], [35.2267, 136.2226], [35.2718, 135.9478], [35.2718, 136.0027], [35.2718, 136.0577], [35.2718, 136.1127], [35.2718, 136.1676], [35.2718, 136.2226], [35.2718, 136.2776], [35.3168, 136.0027], [35.3168, 136.0577], [35.3168, 136.1127], [35.3168, 136.1676], [35.3168, 136.2226], [35.3168, 136.2776], [35.3619, 136.0027], [35.3619, 136.0577], [35.3619, 136.1127], [35.3619, 136.1676], [35.3619, 136.2226], [35.3619, 136.2776], [35.407, 136.0027], [35.407, 136.0577], [35.407, 136.1127], [35.407, 136.1676], [35.407, 136.2226], [35.407, 136.2776], [35.452, 136.0027], [35.452, 136.0577], [35.452, 136.1127], [35.452, 136.1676], [35.452, 136.2226], [35.4971, 136.1127], [35.4971, 136.1676], [35.4971, 136.2226]]
+
+
+def collect_wind_grid():
+    if datetime.now(timezone.utc).minute >= 30 and Path("data/wind_grid.json").exists():
+        return  # 1時間に1回(毎時10分の実行)だけ取る
+    lat = ",".join(str(p[0]) for p in WIND_GRID)
+    lon = ",".join(str(p[1]) for p in WIND_GRID)
+    u = (f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
+         "&hourly=wind_speed_10m,wind_direction_10m&timezone=Asia%2FTokyo&wind_speed_unit=ms&past_days=2&forecast_days=2")
+    j = None
+    for i in range(3):
+        try:
+            j = get_json(u)
+            break
+        except Exception as e:
+            if i == 2:
+                raise
+            print(f"風マップの取得をやり直します({e})", file=sys.stderr)
+            time.sleep(10 * (i + 1))
+    if isinstance(j, dict):
+        j = [j]
+    t = j[0]["hourly"]["time"]
+    out = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "time": t, "p": WIND_GRID,
+           "s": [[None if v is None else round(v, 1) for v in x["hourly"]["wind_speed_10m"]] for x in j],
+           "d": [[None if v is None else round(v) for v in x["hourly"]["wind_direction_10m"]] for x in j]}
+    Path("data/wind_grid.json").write_text(json.dumps(out, separators=(",", ":")), encoding="utf-8")
+    print(f"wind_grid.json を更新しました({len(j)}地点)")
+
+
 # 天気の毎時の記録(風・雨)。1年ごとに別ファイル data/weather_hourly_YYYY.csv にためる
 WH_HEAD = ["time", "place", "code", "precip", "wind", "dir", "gust"]
 WH_VARS = "weather_code,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
@@ -519,7 +550,7 @@ def main():
             w.writeheader()
         w.writerows(rows)
     print(f"{len(rows)} 行を追記しました")
-    for fn in (collect_weather, collect_weather_hourly, collect_forecast_cache, collect_rivers, collect_pref_rivers, collect_alerts):
+    for fn in (collect_weather, collect_weather_hourly, collect_forecast_cache, collect_wind_grid, collect_rivers, collect_pref_rivers, collect_alerts):
         try:
             fn()
         except Exception as e:

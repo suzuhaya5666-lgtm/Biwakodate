@@ -224,9 +224,13 @@ let rnSt={n:0,ok:0,ng:0,bad:""};
 function rnImg(k,el){if(k){rnSt.ok++}else{rnSt.ng++;if(!rnSt.bad&&el)rnSt.bad=el.getAttribute("href")}const d=document.getElementById("rnd");if(d)d.innerHTML=rnDiag()}
 function rnDiag(){return""}
 let wfOn=(()=>{try{return localStorage.getItem("biwa_wf")!=="0"}catch(e){return true}})(),wfF=null,wfRaf=0,wfPt=[],wfImg="";
-function wfBuild(k){if(!wxD){wfF=null;return}const P=[];WXP.forEach((p,i)=>{const hh=wxD[i]&&wxD[i].hourly;if(!hh||hh.wind_speed_10m[k]==null)return;const sp=hh.wind_speed_10m[k],d=hh.wind_direction_10m[k]*Math.PI/180;P.push([p[4],p[5],sp,-Math.sin(d),Math.cos(d)])});
+let wgD=null,wgAt=0;
+async function wgLoad(){if(Date.now()-wgAt<20*60e3)return;wgAt=Date.now();try{const r=await fetch("data/wind_grid.json?t="+Date.now());if(r.ok){wgD=await r.json();if(tab==="wx"&&wfOn)wxPaint()}}catch(e){}}
+function wfBuild(k){if(!wxD){wfF=null;return}const P=[],tk=wxD[0].hourly.time[k],gi=wgD&&wgD.time?wgD.time.indexOf(tk):-1;let E=1500;
+ if(gi>=0){E=400;const my=la=>Math.log(Math.tan(Math.PI/4+la*Math.PI/360));wgD.p.forEach((q,i)=>{const sp=wgD.s[i][gi],dd=wgD.d[i][gi];if(sp==null||dd==null)return;const d=dd*Math.PI/180;P.push([RNA.ax*q[1]+RNA.bx,RNA.ay*my(q[0])+RNA.by,sp,-Math.sin(d),Math.cos(d)])})}
+ else WXP.forEach((p,i)=>{const hh=wxD[i]&&wxD[i].hourly;if(!hh||hh.wind_speed_10m[k]==null)return;const sp=hh.wind_speed_10m[k],d=hh.wind_direction_10m[k]*Math.PI/180;P.push([p[4],p[5],sp,-Math.sin(d),Math.cos(d)])});
  if(!P.length){wfF=null;return}const G=wxGeo(),X0=-90,Y0=-10,X1=G.W+100,Y1=G.H+10,C=8,nx=Math.ceil((X1-X0)/C)+1,ny=Math.ceil((Y1-Y0)/C)+1,S=new Float32Array(nx*ny),U=new Float32Array(nx*ny),V=new Float32Array(nx*ny);
- for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=X0+i*C,y=Y0+j*C;let w=0,s=0,u=0,v=0;P.forEach(q=>{const a=1/((x-q[0])**2+(y-q[1])**2+1500);w+=a;s+=a*q[2];u+=a*q[3];v+=a*q[4]});const L=Math.hypot(u,v)||1,o=j*nx+i;S[o]=s/w;U[o]=u/L;V[o]=v/L}
+ for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=X0+i*C,y=Y0+j*C;let w=0,s=0,u=0,v=0;P.forEach(q=>{const a=1/((x-q[0])**2+(y-q[1])**2+E);w+=a;s+=a*q[2];u+=a*q[3];v+=a*q[4]});const L=Math.hypot(u,v)||1,o=j*nx+i;S[o]=s/w;U[o]=u/L;V[o]=v/L}
  wfF={X0,Y0,X1,Y1,C,nx,ny,S,U,V};
  const cv=document.createElement("canvas");cv.width=nx;cv.height=ny;const cx=cv.getContext("2d"),im=cx.createImageData(nx,ny);
  for(let o=0;o<nx*ny;o++){const c=wfCol(S[o]);im.data[o*4]=c[0];im.data[o*4+1]=c[1];im.data[o*4+2]=c[2];im.data[o*4+3]=255}cx.putImageData(im,0,0);wfImg=cv.toDataURL()}
@@ -300,7 +304,7 @@ function wxLab(k){if(!wxD)return"";const t=wxD[0].hourly.time[k],td=wxD[0].curre
 function wxPaint(){if(!wxD)return;const k=wxK;if(wfOn){wfBuild(k);const f=$("#wxf");if(f)f.innerHTML=wfSvg();if(!wfRaf)wfStart()}
  const a=$("#wxs"),b=$("#wxp"),l=$("#wlab"),sl=$("#wsl");rnPaintOnly();if(a)a.innerHTML=shoreSvg(k);if(b)b.innerHTML=pinsSvg(k);if(l)l.textContent=wxLab(k);if(sl)sl.value=k}
 function wx(){
- rnStop();loadTn();loadRn();
+ rnStop();loadTn();loadRn();if(wfOn)wgLoad();
  if((!wxD||Date.now()-wxAt>15*60e3)&&Date.now()-wxTry>60e3)loadWx();
  if(wxD&&!wxW){try{wxW=wxWave()}catch(e){wxW=null}}
  if(wxD&&(wxK<0||wxK>=wxD[0].hourly.time.length))wxK=nowIdx();
