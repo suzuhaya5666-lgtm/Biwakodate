@@ -117,7 +117,10 @@ def collect_forecast_cache():
         for i in range(5):  # 一時的な通信失敗に備えて数回やり直す
             try:
                 try:
-                    return get_json(u)
+                    j = get_json(u)
+                    if isinstance(j, dict) and j.get("error"):
+                        raise RuntimeError(f"Open-Meteoのエラー: {j.get('reason')}")
+                    return j
                 except Exception:  # Python経由で失敗するときがあるので、curlでも試す
                     r = subprocess.run(["curl", "-sS", "-m", "30", "-A", "biwako-fishing-collector/0.1", u], capture_output=True, text=True, timeout=40)
                     return json.loads(r.stdout)
@@ -147,6 +150,8 @@ def collect_wind_grid():
     for i in range(3):
         try:
             j = get_json(u)
+            if isinstance(j, dict) and j.get("error"):
+                raise RuntimeError(f"Open-Meteoのエラー: {j.get('reason')}")
             break
         except Exception as e:
             if i == 2:
