@@ -223,7 +223,7 @@ function rnIdx(F){F=F||rnFrames();let i=rnSel?F.findIndex(f=>f.v===rnSel):-1;if(
 let rnSt={n:0,ok:0,ng:0,bad:""};
 function rnImg(k,el){if(k){rnSt.ok++}else{rnSt.ng++;if(!rnSt.bad&&el)rnSt.bad=el.getAttribute("href")}const d=document.getElementById("rnd");if(d)d.innerHTML=rnDiag()}
 function rnDiag(){return""}
-let wfOn=(()=>{try{return localStorage.getItem("biwa_wf")!=="0"}catch(e){return true}})(),wfF=null,wfRaf=0,wfPt=[],wfImg="";
+let wfOn=(()=>{try{return localStorage.getItem("biwa_wf")!=="0"&&localStorage.getItem("biwa_rn")==="0"}catch(e){return false}})(),wfF=null,wfRaf=0,wfPt=[],wfImg="";
 let wgD=null,wgAt=0;
 async function wgLoad(){if(Date.now()-wgAt<20*60e3)return;wgAt=Date.now();try{const r=await fetch("data/wind_grid.json?t="+Date.now());if(r.ok){wgD=await r.json();if(tab==="wx"&&wfOn)wxPaint()}}catch(e){}}
 function wfBuild(k){if(!wxD){wfF=null;return}const P=[],tk=wxD[0].hourly.time[k],gi=wgD&&wgD.time?wgD.time.indexOf(tk):-1;let E=1500;
@@ -259,7 +259,12 @@ async function rnPt(){const el=document.getElementById("rnpt");if(!el||wxSel<0)r
   const L=["1mm/h未満","1〜5mm/h","5〜10mm/h","10〜20mm/h","20〜30mm/h","30〜50mm/h","50〜80mm/h","80mm/h以上"];
   const e=document.getElementById("rnpt");if(e)e.innerHTML=`雨雲(気象庁 ${lab}): <b>${best==null?"雨なし":L[best]}</b>`}catch(e){const q=document.getElementById("rnpt");if(q)q.textContent=""}}
 function rnLv(r,g,b){const P=[[242,242,255],[160,210,255],[33,140,255],[0,65,255],[250,245,0],[255,153,0],[255,40,0],[180,0,104]];let k=0,d=1e9;P.forEach((p,i)=>{const e=(p[0]-r)**2+(p[1]-g)**2+(p[2]-b)**2;if(e<d){d=e;k=i}});return k}
-function rnLeg(){if(!rnOn)return"";const C=[["#b40068","80"],["#ff2800","50"],["#ff9900","30"],["#faf500","20"],["#0041ff","10"],["#218cff","5"],["#a0d2ff","1"],["#f2f2ff",""]],h=17;
+function wfLeg(){const H=136,V=11,st=[11,8,6,4,2,0].map(v=>`rgb(${wfCol(v)}) ${((1-v/V)*100).toFixed(1)}%`).join(",");
+ return`<div style="position:absolute;left:8px;top:8px;background:rgba(40,40,40,.55);border-radius:8px;padding:7px 6px 5px;pointer-events:none;color:#fff;font-size:11px;font-weight:600;line-height:1">
+ <div style="display:flex"><div style="width:9px;height:${H}px;border-radius:5px;background:linear-gradient(${st})"></div>
+ <div style="position:relative;width:22px;height:${H}px">${[10,8,6,4,2].map(v=>`<span style="position:absolute;left:5px;top:${(1-v/V)*H}px;transform:translateY(-50%)">${v}</span>`).join("")}</div></div>
+ <div style="font-size:9px;font-weight:400;margin-top:4px;text-align:center">m/s</div></div>`}
+function rnLeg(){if(!rnOn)return wfOn?wfLeg():"";const C=[["#b40068","80"],["#ff2800","50"],["#ff9900","30"],["#faf500","20"],["#0041ff","10"],["#218cff","5"],["#a0d2ff","1"],["#f2f2ff",""]],h=17;
  return`<div style="position:absolute;left:8px;top:8px;background:rgba(40,40,40,.55);border-radius:8px;padding:7px 6px 5px;pointer-events:none;color:#fff;font-size:11px;font-weight:600;line-height:1">
  <div style="display:flex"><div style="width:9px;border-radius:5px;overflow:hidden">${C.map(c=>`<div style="height:${h}px;background:${c[0]}"></div>`).join("")}</div>
  <div style="position:relative;width:22px;height:${h*C.length}px">${C.map((c,i)=>c[1]?`<span style="position:absolute;left:5px;top:${h*(i+1)}px;transform:translateY(-50%)">${c[1]}</span>`:"").join("")}</div></div>
@@ -341,7 +346,7 @@ function wx(){
  {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}}}
  {const sl=$("#wsl");if(sl){sl.oninput=e=>{wxK=+e.target.value;wxPaint()};
   $("#wnow").onclick=()=>{wxK=nowIdx();wxPaint()};$("#wm").onclick=()=>{wxK=Math.max(0,wxK-1);wxPaint()};$("#wp").onclick=()=>{wxK=Math.min(N-1,wxK+1);wxPaint()};
-  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};if($("#wsb"))$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};$("#wmv").onclick=()=>{wxNew=!wxNew;try{localStorage.setItem("biwa_mv",wxNew?"new":"old")}catch(e){}wx()};{wfStart();{const b=$("#wwf");if(b)b.onclick=()=>{wfOn=!wfOn;try{localStorage.setItem("biwa_wf",wfOn?"1":"0")}catch(e){}wfStop();wx()}}rnBind();rnPt();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;try{localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
+  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};if($("#wsb"))$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};$("#wmv").onclick=()=>{wxNew=!wxNew;try{localStorage.setItem("biwa_mv",wxNew?"new":"old")}catch(e){}wx()};{wfStart();{const b=$("#wwf");if(b)b.onclick=()=>{wfOn=!wfOn;if(wfOn){rnStop();rnOn=false}try{localStorage.setItem("biwa_wf",wfOn?"1":"0");localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}wfStop();wx()}}rnBind();rnPt();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;if(rnOn){wfOn=false;wfStop()}try{localStorage.setItem("biwa_rn",rnOn?"1":"0");localStorage.setItem("biwa_wf",wfOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
  {const c=$("#wxc");if(c)c.onclick=()=>{wxSel=-1;wx()}}
  {const h=$("#wmh"),d=$("#wmd");if(h){h.onclick=()=>{wxMode="h";wx()};d.onclick=()=>{wxMode="d";wx()}}}
  {const r=$("#wxu");if(r)r.onclick=()=>{wxAt=0;loadWx()}}
