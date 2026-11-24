@@ -240,9 +240,12 @@ function wfSvg(){if(!wfOn||!wfF)return"";const F=wfF;return`<image href="${wfImg
 function wfAt(x,y){const F=wfF,i=Math.round((x-F.X0)/F.C),j=Math.round((y-F.Y0)/F.C);if(i<0||j<0||i>=F.nx||j>=F.ny)return null;const o=j*F.nx+i;return[F.U[o],F.V[o],F.S[o]]}
 function wfTip(e,sv){const m=sv.getScreenCTM();if(!m)return;const q=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse()),F=wfF;let w=0,sp=0,u=0,v=0;
  F.P.forEach(t=>{const a=1/((q.x-t[0])**2+(q.y-t[1])**2+F.E);w+=a;sp+=a*t[2];u+=a*t[3];v+=a*t[4]});sp/=w;const d=(Math.atan2(-u,v)*180/Math.PI+360)%360;
- const box=sv.parentNode,r=box.getBoundingClientRect();let el=document.getElementById("wftip");if(!el){el=document.createElement("div");el.id="wftip";box.appendChild(el)}
+ mapTip(e,sv,`${dirN(d)} ${sp.toFixed(1)}m/s`)}
+function mapTip(e,sv,txt){const box=sv.parentNode,r=box.getBoundingClientRect();let el=document.getElementById("wftip");if(!el){el=document.createElement("div");el.id="wftip";box.appendChild(el)}
  el.style.cssText=`position:absolute;left:${e.clientX-r.left}px;top:${e.clientY-r.top}px;transform:translate(-50%,-125%);background:rgba(30,30,30,.82);color:#fff;font-size:13px;font-weight:700;padding:5px 9px;border-radius:8px;white-space:nowrap;pointer-events:none;z-index:5`;
- el.textContent=`${dirN(d)} ${sp.toFixed(1)}m/s`;clearTimeout(el._t);el._t=setTimeout(()=>el.remove(),4000)}
+ el.textContent=txt;clearTimeout(el._t);el._t=setTimeout(()=>el.remove(),4000)}
+async function rnTip(e,sv){const m=sv.getScreenCTM();if(!m)return;const q=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse()),lo=(q.x-RNA.bx)/RNA.ax,mm=(q.y-RNA.by)/RNA.ay,la=(2*Math.atan(Math.exp(mm))-Math.PI/2)*180/Math.PI;
+ mapTip(e,sv,"…");const v=await rnAtLL(la,lo);mapTip(e,sv,v===undefined?"雨雲を読めません":v==null?"雨なし":RNL[v])}
 function wfStop(){if(wfRaf)cancelAnimationFrame(wfRaf);wfRaf=0}
 function wfStart(){wfStop();const cv=document.getElementById("wfc"),sv=cv&&cv.parentNode.querySelector("svg");if(!cv||!wfOn||!wfF)return;
  const dpr=window.devicePixelRatio||1,F=wfF,rnd=()=>[F.X0+Math.random()*(F.X1-F.X0),F.Y0+Math.random()*(F.Y1-F.Y0),Math.floor(Math.random()*60)];
@@ -256,13 +259,14 @@ function wfStart(){wfStop();const cv=document.getElementById("wfc"),sv=cv&&cv.pa
    ctx.moveTo(M.a*p[0]+M.c*p[1]+M.e,M.b*p[0]+M.d*p[1]+M.f);ctx.lineTo(M.a*x2+M.c*y2+M.e,M.b*x2+M.d*y2+M.f);p[0]=x2;p[1]=y2;p[2]++});
   ctx.stroke();wfRaf=requestAnimationFrame(step)};wfRaf=requestAnimationFrame(step)}
 const rnPX={};
-async function rnPt(){const el=document.getElementById("rnpt");if(!el||wxSel<0)return;const F=rnFrames(),f=F[rnIdx(F)];if(!f){el.textContent="";return}
- const [,la,lo]=WXP[wxSel],n=2**RN_Z,fx=(lo+180)/360*n,m=Math.log(Math.tan(Math.PI/4+la*Math.PI/360)),fy=(1-m/Math.PI)/2*n,X=Math.floor(fx),Y=Math.floor(fy),
-  px=Math.floor((fx-X)*256),py=Math.floor((fy-Y)*256),U=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`,lab=rnLab().replace("(いま)","");
+const RNL=["1mm/h未満","1〜5mm/h","5〜10mm/h","10〜20mm/h","20〜30mm/h","30〜50mm/h","50〜80mm/h","80mm/h以上"];
+async function rnAtLL(la,lo){const F=rnFrames(),f=F[rnIdx(F)];if(!f)return undefined;const n=2**RN_Z,fx=(lo+180)/360*n,m=Math.log(Math.tan(Math.PI/4+la*Math.PI/360)),fy=(1-m/Math.PI)/2*n,X=Math.floor(fx),Y=Math.floor(fy),
+  px=Math.floor((fx-X)*256),py=Math.floor((fy-Y)*256),U=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`;
  try{if(!rnPX[U]){const r=await fetch(U);if(!r.ok)throw 0;const bm=await createImageBitmap(await r.blob()),c=document.createElement("canvas");c.width=bm.width;c.height=bm.height;const x=c.getContext("2d");x.drawImage(bm,0,0);rnPX[U]=x.getImageData(0,0,c.width,c.height)}
   const im=rnPX[U];let best=null;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const qx=Math.min(255,Math.max(0,px+dx)),qy=Math.min(255,Math.max(0,py+dy)),i=(qy*im.width+qx)*4;if(!im.data[i+3])continue;const v=rnLv(im.data[i],im.data[i+1],im.data[i+2]);if(best==null||v>best)best=v}
-  const L=["1mm/h未満","1〜5mm/h","5〜10mm/h","10〜20mm/h","20〜30mm/h","30〜50mm/h","50〜80mm/h","80mm/h以上"];
-  const e=document.getElementById("rnpt");if(e)e.innerHTML=`雨雲(気象庁 ${lab}): <b>${best==null?"雨なし":L[best]}</b>`}catch(e){const q=document.getElementById("rnpt");if(q)q.textContent=""}}
+  return best}catch(e){return undefined}}
+async function rnPt(){const el=document.getElementById("rnpt");if(!el||wxSel<0)return;const [,la,lo]=WXP[wxSel],lab=rnLab().replace("(いま)",""),v=await rnAtLL(la,lo),e=document.getElementById("rnpt");if(!e)return;
+ e.innerHTML=v===undefined?"":`雨雲(気象庁 ${lab}): <b>${v==null?"雨なし":RNL[v]}</b>`}
 function rnLv(r,g,b){const P=[[242,242,255],[160,210,255],[33,140,255],[0,65,255],[250,245,0],[255,153,0],[255,40,0],[180,0,104]];let k=0,d=1e9;P.forEach((p,i)=>{const e=(p[0]-r)**2+(p[1]-g)**2+(p[2]-b)**2;if(e<d){d=e;k=i}});return k}
 function wfLeg(){const H=136,V=11,st=[11,8,6,4,2,0].map(v=>`rgb(${wfCol(v)}) ${((1-v/V)*100).toFixed(1)}%`).join(",");
  return`<div style="position:absolute;left:8px;top:8px;background:rgba(40,40,40,.55);border-radius:8px;padding:7px 6px 5px;pointer-events:none;color:#fff;font-size:11px;font-weight:600;line-height:1">
@@ -348,7 +352,7 @@ function wx(){
   <p class="note"><span style="color:#f2d04b">━</span>〜0.2m <span style="color:#f2994a">━</span>0.3m <span style="color:#e5533d">━</span>0.6m <span style="color:#a4161a">━</span>1m以上(風の吹き寄せる岸の波高の目安)。風がやんでも、約4時間かけて薄くなります。風の予報から計算した推定で、実測ではありません。安全の判断には使わないでください。</p>
   <div class="row"><button id="wmv" class="${wxNew?"pri":""}">新マップ ${wxNew?"オン":"オフ"}</button></div>
   <p class="note">天気: Open-Meteo(予報モデルの値)。雨雲: 気象庁の高解像度降水ナウキャスト(水色=弱い、青=やや強い、黄・橙・赤=強い)。${wxAt?"取得 "+new Date(wxAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""} <button id="wxu">更新</button> ${wxBusy?"読み込み中…":""} ${esc(wxErr)}</p></div>${sh}`;
- {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}else if(wfOn&&wfF)wfTip(e,sv)}}
+ {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}else if(wfOn&&wfF)wfTip(e,sv);else if(rnOn)rnTip(e,sv)}}
  {const sl=$("#wsl");if(sl){sl.oninput=e=>{wxK=+e.target.value;wxPaint()};
   $("#wnow").onclick=()=>{wxK=nowIdx();wxPaint()};$("#wm").onclick=()=>{wxK=Math.max(0,wxK-1);wxPaint()};$("#wp").onclick=()=>{wxK=Math.min(N-1,wxK+1);wxPaint()};
   $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};if($("#wsb"))$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};$("#wmv").onclick=()=>{wxNew=!wxNew;try{localStorage.setItem("biwa_mv",wxNew?"new":"old")}catch(e){}wx()};{wfStart();{const b=$("#wwp");if(b)b.onclick=()=>{wpOn=!wpOn;if(!wpOn)wxSel=-1;try{localStorage.setItem("biwa_wp",wpOn?"1":"0")}catch(e){}wfStop();wx()}}{const b=$("#wwf");if(b)b.onclick=()=>{wfOn=!wfOn;if(wfOn){rnStop();rnOn=false}try{localStorage.setItem("biwa_wf",wfOn?"1":"0");localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}wfStop();wx()}}rnBind();rnPt();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;if(rnOn){wfOn=false;wfStop()}try{localStorage.setItem("biwa_rn",rnOn?"1":"0");localStorage.setItem("biwa_wf",wfOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
