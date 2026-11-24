@@ -223,6 +223,15 @@ function rnIdx(F){F=F||rnFrames();let i=rnSel?F.findIndex(f=>f.v===rnSel):-1;if(
 let rnSt={n:0,ok:0,ng:0,bad:""};
 function rnImg(k,el){if(k){rnSt.ok++}else{rnSt.ng++;if(!rnSt.bad&&el)rnSt.bad=el.getAttribute("href")}const d=document.getElementById("rnd");if(d)d.innerHTML=rnDiag()}
 function rnDiag(){return""}
+const rnPX={};
+async function rnPt(){const el=document.getElementById("rnpt");if(!el||wxSel<0)return;const F=rnFrames(),f=F[rnIdx(F)];if(!f){el.textContent="";return}
+ const [,la,lo]=WXP[wxSel],n=2**RN_Z,fx=(lo+180)/360*n,m=Math.log(Math.tan(Math.PI/4+la*Math.PI/360)),fy=(1-m/Math.PI)/2*n,X=Math.floor(fx),Y=Math.floor(fy),
+  px=Math.floor((fx-X)*256),py=Math.floor((fy-Y)*256),U=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`,lab=rnLab().replace("(いま)","");
+ try{if(!rnPX[U]){const r=await fetch(U);if(!r.ok)throw 0;const bm=await createImageBitmap(await r.blob()),c=document.createElement("canvas");c.width=bm.width;c.height=bm.height;const x=c.getContext("2d");x.drawImage(bm,0,0);rnPX[U]=x.getImageData(0,0,c.width,c.height)}
+  const im=rnPX[U];let best=null;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const qx=Math.min(255,Math.max(0,px+dx)),qy=Math.min(255,Math.max(0,py+dy)),i=(qy*im.width+qx)*4;if(!im.data[i+3])continue;const v=rnLv(im.data[i],im.data[i+1],im.data[i+2]);if(best==null||v>best)best=v}
+  const L=["1mm/h未満","1〜5mm/h","5〜10mm/h","10〜20mm/h","20〜30mm/h","30〜50mm/h","50〜80mm/h","80mm/h以上"];
+  const e=document.getElementById("rnpt");if(e)e.innerHTML=`雨雲(気象庁 ${lab}): <b>${best==null?"雨なし":L[best]}</b>`}catch(e){const q=document.getElementById("rnpt");if(q)q.textContent=""}}
+function rnLv(r,g,b){const P=[[242,242,255],[160,210,255],[33,140,255],[0,65,255],[250,245,0],[255,153,0],[255,40,0],[180,0,104]];let k=0,d=1e9;P.forEach((p,i)=>{const e=(p[0]-r)**2+(p[1]-g)**2+(p[2]-b)**2;if(e<d){d=e;k=i}});return k}
 function rnLeg(){if(!rnOn)return"";const C=[["#b40068","80"],["#ff2800","50"],["#ff9900","30"],["#faf500","20"],["#0041ff","10"],["#218cff","5"],["#a0d2ff","1"],["#f2f2ff",""]],h=17;
  return`<div style="position:absolute;left:8px;top:8px;background:rgba(40,40,40,.55);border-radius:8px;padding:7px 6px 5px;pointer-events:none;color:#fff;font-size:11px;font-weight:600;line-height:1">
  <div style="display:flex"><div style="width:9px;border-radius:5px;overflow:hidden">${C.map(c=>`<div style="height:${h}px;background:${c[0]}"></div>`).join("")}</div>
@@ -238,7 +247,7 @@ function rnSvg(){rnSt={n:0,ok:0,ng:0,bad:"",u:[]};if(!rnOn)return"";const F=rnFr
 function rnLab(){if(!rnOn)return"";if(!rnC)return"雨雲を読み込み中…";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"雨雲データを取得できませんでした";
  const t=new Date(rnMs(f.v)+9*36e5),h=t.getUTCHours(),m=t.getUTCMinutes();return`${h}:${String(m).padStart(2,"0")} ${f.fc?"の予測":"の実況"}`+(rnIdx(F)===F.filter(x=>!x.fc).length-1?"(いま)":"")}
 function rnStop(){if(rnTimer){clearInterval(rnTimer);rnTimer=null}const b=document.getElementById("rnp");if(b)b.textContent="▶"}
-function rnPaintOnly(){const r=document.getElementById("wxr"),l=document.getElementById("rnl"),sl=document.getElementById("rns");if(r)r.innerHTML=rnSvg();if(l)l.textContent=rnLab();if(sl){const F=rnFrames();sl.value=rnIdx(F)}}
+function rnPaintOnly(){rnPt();const r=document.getElementById("wxr"),l=document.getElementById("rnl"),sl=document.getElementById("rns");if(r)r.innerHTML=rnSvg();if(l)l.textContent=rnLab();if(sl){const F=rnFrames();sl.value=rnIdx(F)}}
 function rnCtl(){if(!rnOn)return"";const F=rnFrames();if(!F.length)return`<div class="note" id="rnl">${rnLab()}</div>`;
  return`<div class="row" style="align-items:center;gap:8px;margin-top:4px"><button id="rnp" style="min-width:44px">▶</button><input id="rns" type="range" min="0" max="${F.length-1}" step="1" value="${rnIdx(F)}" style="flex:1;min-width:0"><b id="rnl" style="font-size:13px;text-align:right;white-space:nowrap">${rnLab()}</b></div>
  <div class="note" style="margin-top:0">雨雲: 過去3時間〜1時間先を5分刻みで動かせます(気象庁)</div>`}
@@ -290,6 +299,7 @@ function wx(){
    body=`<table><tr><th>日付</th><th>天気</th><th class="n">雨量合計</th><th class="n">最大風速</th><th class="n">気温(低〜高)</th></tr>`+days.map(d=>{const x=m[d];return`<tr class="${d===td?"cn":""}"><td>${+d.slice(5,7)}/${+d.slice(8)}(${wd(d)})</td><td>${x.code==null?"–":WXE(x.code)+" "+WXN(x.code)}</td><td class="n">${x.precip==null?"–":x.precip.toFixed(1)+"mm"}</td><td class="n">${x.wmax==null?"–":x.wmax.toFixed(1)}</td><td class="n">${x.tmin==null?"–":`<span class="${tnCls(x.tmin,tnDay(wxSel,d,"m"))}">${Math.round(x.tmin)}</span>〜<span class="${tnCls(x.tmax,tnDay(wxSel,d,"x"))}">${Math.round(x.tmax)}</span>℃`}</td></tr>`}).join("")+`</table><p class="note">今日の行は途中の値です。昨日までは、毎時の自動取得で保存した日ごとの記録です。</p>`}
   sh=`<div class="sheet"><div class="row"><b style="flex:1;font-size:17px">${nm}</b><button id="wxc">閉じる</button></div>
   <div class="sc"><div style="font-size:15px">${WXE(c.weather_code)} <b>${(+c.temperature_2m).toFixed(1)}℃</b>　${arrow(c.wind_direction_10m)} ${dirN(c.wind_direction_10m)}の風 <b>${c.wind_speed_10m.toFixed(1)}</b>m/s</div>
+  ${rnOn?`<div id="rnpt" style="margin:4px 0;font-size:14px"></div>`:""}
   <div class="note" style="margin:4px 0">雨量の合計: 一昨日 <b>${pr(ds.time[0])}</b> / 昨日 <b>${pr(ds.time[1])}</b> / 今日 <b>${pr(td)}</b> / 明日 <b>${pr(ds.time[3])}</b> mm</div>
   <div class="row"><button class="${wxMode==="h"?"pri":""}" id="wmh">1時間ごと(48時間前から)</button><button class="${wxMode==="d"?"pri":""}" id="wmd">日ごとの記録</button></div>
   <div class="tb">${body}</div>${tnD?TNNOTE:""}</div></div>`}
@@ -303,7 +313,7 @@ function wx(){
  {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}}}
  {const sl=$("#wsl");if(sl){sl.oninput=e=>{wxK=+e.target.value;wxPaint()};
   $("#wnow").onclick=()=>{wxK=nowIdx();wxPaint()};$("#wm").onclick=()=>{wxK=Math.max(0,wxK-1);wxPaint()};$("#wp").onclick=()=>{wxK=Math.min(N-1,wxK+1);wxPaint()};
-  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};if($("#wsb"))$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};$("#wmv").onclick=()=>{wxNew=!wxNew;try{localStorage.setItem("biwa_mv",wxNew?"new":"old")}catch(e){}wx()};{rnBind();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;try{localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
+  $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};if($("#wsb"))$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};$("#wmv").onclick=()=>{wxNew=!wxNew;try{localStorage.setItem("biwa_mv",wxNew?"new":"old")}catch(e){}wx()};{rnBind();rnPt();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;try{localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
  {const c=$("#wxc");if(c)c.onclick=()=>{wxSel=-1;wx()}}
  {const h=$("#wmh"),d=$("#wmd");if(h){h.onclick=()=>{wxMode="h";wx()};d.onclick=()=>{wxMode="d";wx()}}}
  {const r=$("#wxu");if(r)r.onclick=()=>{wxAt=0;loadWx()}}
