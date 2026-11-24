@@ -231,13 +231,18 @@ function wfBuild(k){if(!wxD){wfF=null;return}const P=[],tk=wxD[0].hourly.time[k]
  else WXP.forEach((p,i)=>{const hh=wxD[i]&&wxD[i].hourly;if(!hh||hh.wind_speed_10m[k]==null)return;const sp=hh.wind_speed_10m[k],d=hh.wind_direction_10m[k]*Math.PI/180;P.push([p[4],p[5],sp,-Math.sin(d),Math.cos(d)])});
  if(!P.length){wfF=null;return}const G=wxGeo(),X0=-90,Y0=-10,X1=G.W+100,Y1=G.H+10,C=8,nx=Math.ceil((X1-X0)/C)+1,ny=Math.ceil((Y1-Y0)/C)+1,S=new Float32Array(nx*ny),U=new Float32Array(nx*ny),V=new Float32Array(nx*ny);
  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=X0+i*C,y=Y0+j*C;let w=0,s=0,u=0,v=0;P.forEach(q=>{const a=1/((x-q[0])**2+(y-q[1])**2+E);w+=a;s+=a*q[2];u+=a*q[3];v+=a*q[4]});const L=Math.hypot(u,v)||1,o=j*nx+i;S[o]=s/w;U[o]=u/L;V[o]=v/L}
- wfF={X0,Y0,X1,Y1,C,nx,ny,S,U,V};
+ wfF={X0,Y0,X1,Y1,C,nx,ny,S,U,V,P,E};
  const cv=document.createElement("canvas");cv.width=nx;cv.height=ny;const cx=cv.getContext("2d"),im=cx.createImageData(nx,ny);
  for(let o=0;o<nx*ny;o++){const c=wfCol(S[o]);im.data[o*4]=c[0];im.data[o*4+1]=c[1];im.data[o*4+2]=c[2];im.data[o*4+3]=255}cx.putImageData(im,0,0);wfImg=cv.toDataURL()}
 function wfCol(v){const st=[[0,[70,110,200]],[2,[60,165,185]],[4,[75,175,85]],[6,[200,195,55]],[8,[225,140,45]],[11,[200,60,45]]];if(v<=0)return st[0][1];
  for(let i=1;i<st.length;i++)if(v<=st[i][0]){const f=(v-st[i-1][0])/(st[i][0]-st[i-1][0]),a=st[i-1][1],b=st[i][1];return a.map((x,q)=>Math.round(x+(b[q]-x)*f))}return st[st.length-1][1]}
 function wfSvg(){if(!wfOn||!wfF)return"";const F=wfF;return`<image href="${wfImg}" x="${F.X0}" y="${F.Y0}" width="${(F.nx-1)*F.C}" height="${(F.ny-1)*F.C}" preserveAspectRatio="none" opacity=".45" style="pointer-events:none"/>`}
 function wfAt(x,y){const F=wfF,i=Math.round((x-F.X0)/F.C),j=Math.round((y-F.Y0)/F.C);if(i<0||j<0||i>=F.nx||j>=F.ny)return null;const o=j*F.nx+i;return[F.U[o],F.V[o],F.S[o]]}
+function wfTip(e,sv){const m=sv.getScreenCTM();if(!m)return;const q=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse()),F=wfF;let w=0,sp=0,u=0,v=0;
+ F.P.forEach(t=>{const a=1/((q.x-t[0])**2+(q.y-t[1])**2+F.E);w+=a;sp+=a*t[2];u+=a*t[3];v+=a*t[4]});sp/=w;const d=(Math.atan2(-u,v)*180/Math.PI+360)%360;
+ const box=sv.parentNode,r=box.getBoundingClientRect();let el=document.getElementById("wftip");if(!el){el=document.createElement("div");el.id="wftip";box.appendChild(el)}
+ el.style.cssText=`position:absolute;left:${e.clientX-r.left}px;top:${e.clientY-r.top}px;transform:translate(-50%,-125%);background:rgba(30,30,30,.82);color:#fff;font-size:13px;font-weight:700;padding:5px 9px;border-radius:8px;white-space:nowrap;pointer-events:none;z-index:5`;
+ el.textContent=`${dirN(d)} ${sp.toFixed(1)}m/s`;clearTimeout(el._t);el._t=setTimeout(()=>el.remove(),4000)}
 function wfStop(){if(wfRaf)cancelAnimationFrame(wfRaf);wfRaf=0}
 function wfStart(){wfStop();const cv=document.getElementById("wfc"),sv=cv&&cv.parentNode.querySelector("svg");if(!cv||!wfOn||!wfF)return;
  const dpr=window.devicePixelRatio||1,F=wfF,rnd=()=>[F.X0+Math.random()*(F.X1-F.X0),F.Y0+Math.random()*(F.Y1-F.Y0),Math.floor(Math.random()*60)];
@@ -343,7 +348,7 @@ function wx(){
   <p class="note"><span style="color:#f2d04b">━</span>〜0.2m <span style="color:#f2994a">━</span>0.3m <span style="color:#e5533d">━</span>0.6m <span style="color:#a4161a">━</span>1m以上(風の吹き寄せる岸の波高の目安)。風がやんでも、約4時間かけて薄くなります。風の予報から計算した推定で、実測ではありません。安全の判断には使わないでください。</p>
   <div class="row"><button id="wmv" class="${wxNew?"pri":""}">新マップ ${wxNew?"オン":"オフ"}</button></div>
   <p class="note">天気: Open-Meteo(予報モデルの値)。雨雲: 気象庁の高解像度降水ナウキャスト(水色=弱い、青=やや強い、黄・橙・赤=強い)。${wxAt?"取得 "+new Date(wxAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""} <button id="wxu">更新</button> ${wxBusy?"読み込み中…":""} ${esc(wxErr)}</p></div>${sh}`;
- {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}}}
+ {const sv=$("#v-wx").querySelector("svg");if(sv)sv.onclick=e=>{const p=e.target.closest&&e.target.closest("g.pin");if(p){wxSel=+p.dataset.i;wx()}else if(wfOn&&wfF)wfTip(e,sv)}}
  {const sl=$("#wsl");if(sl){sl.oninput=e=>{wxK=+e.target.value;wxPaint()};
   $("#wnow").onclick=()=>{wxK=nowIdx();wxPaint()};$("#wm").onclick=()=>{wxK=Math.max(0,wxK-1);wxPaint()};$("#wp").onclick=()=>{wxK=Math.min(N-1,wxK+1);wxPaint()};
   $("#wwv").onclick=()=>{wxOn=!wxOn;wx()};if($("#wsb"))$("#wsb").onclick=()=>{wxSouth=!wxSouth;try{localStorage.setItem("biwa_ws",wxSouth?"1":"0")}catch(e){}wx()};$("#wmv").onclick=()=>{wxNew=!wxNew;try{localStorage.setItem("biwa_mv",wxNew?"new":"old")}catch(e){}wx()};{wfStart();{const b=$("#wwp");if(b)b.onclick=()=>{wpOn=!wpOn;if(!wpOn)wxSel=-1;try{localStorage.setItem("biwa_wp",wpOn?"1":"0")}catch(e){}wfStop();wx()}}{const b=$("#wwf");if(b)b.onclick=()=>{wfOn=!wfOn;if(wfOn){rnStop();rnOn=false}try{localStorage.setItem("biwa_wf",wfOn?"1":"0");localStorage.setItem("biwa_rn",rnOn?"1":"0")}catch(e){}wfStop();wx()}}rnBind();rnPt();const b=$("#wrn");if(b)b.onclick=()=>{rnStop();rnOn=!rnOn;if(rnOn){wfOn=false;wfStop()}try{localStorage.setItem("biwa_rn",rnOn?"1":"0");localStorage.setItem("biwa_wf",wfOn?"1":"0")}catch(e){}if(rnOn){rnAt=0;loadRn()}wx()}}}}
