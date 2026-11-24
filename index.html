@@ -236,7 +236,7 @@ function wfBuild(k){if(!wxD){wfF=null;return}const P=[],tk=wxD[0].hourly.time[k]
  for(let o=0;o<nx*ny;o++){const c=wfCol(S[o]);im.data[o*4]=c[0];im.data[o*4+1]=c[1];im.data[o*4+2]=c[2];im.data[o*4+3]=255}cx.putImageData(im,0,0);wfImg=cv.toDataURL()}
 function wfCol(v){const st=[[0,[70,110,200]],[2,[60,165,185]],[4,[75,175,85]],[6,[200,195,55]],[8,[225,140,45]],[11,[200,60,45]]];if(v<=0)return st[0][1];
  for(let i=1;i<st.length;i++)if(v<=st[i][0]){const f=(v-st[i-1][0])/(st[i][0]-st[i-1][0]),a=st[i-1][1],b=st[i][1];return a.map((x,q)=>Math.round(x+(b[q]-x)*f))}return st[st.length-1][1]}
-function wfSvg(){if(!wfOn||!wfF)return"";const F=wfF;return`<image href="${wfImg}" x="${F.X0}" y="${F.Y0}" width="${(F.nx-1)*F.C}" height="${(F.ny-1)*F.C}" preserveAspectRatio="none" opacity=".45" style="pointer-events:none"/>`}
+function wfSvg(){if(!wfOn||!wfF)return"";const F=wfF;return`<image href="${wfImg}" x="${F.X0}" y="${F.Y0}" width="${(F.nx-1)*F.C}" height="${(F.ny-1)*F.C}" preserveAspectRatio="none" opacity=".6" style="pointer-events:none"/>`}
 function wfAt(x,y){const F=wfF,i=Math.round((x-F.X0)/F.C),j=Math.round((y-F.Y0)/F.C);if(i<0||j<0||i>=F.nx||j>=F.ny)return null;const o=j*F.nx+i;return[F.U[o],F.V[o],F.S[o]]}
 function wfTip(e,sv){const m=sv.getScreenCTM();if(!m)return;const q=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse()),F=wfF;let w=0,sp=0,u=0,v=0;
  F.P.forEach(t=>{const a=1/((q.x-t[0])**2+(q.y-t[1])**2+F.E);w+=a;sp+=a*t[2];u+=a*t[3];v+=a*t[4]});sp/=w;const d=(Math.atan2(-u,v)*180/Math.PI+360)%360;
@@ -257,7 +257,9 @@ function mapTip(e,sv,txt){const box=sv.parentNode,r=box.getBoundingClientRect();
 async function rnTip(e,sv){const m=sv.getScreenCTM();if(!m)return;const q=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse()),lo=(q.x-RNA.bx)/RNA.ax,mm=(q.y-RNA.by)/RNA.ay,la=(2*Math.atan(Math.exp(mm))-Math.PI/2)*180/Math.PI;
  mapTip(e,sv,"…");const v=await rnAtLL(la,lo);mapTip(e,sv,v===undefined?"雨雲を読めません":v==null?"雨なし":RNL[v])}
 function wfStop(){if(wfRaf)cancelAnimationFrame(wfRaf);wfRaf=0}
-function wfStart(){wfStop();const cv=document.getElementById("wfc"),sv=cv&&cv.parentNode.querySelector("svg");if(!cv||!wfOn||!wfF)return;
+let wfVis=true,wfIO=null;
+document.addEventListener("visibilitychange",()=>{if(document.hidden)wfStop();else if(tab==="wx"&&wfOn&&wfVis&&!wfRaf)wfStart()});
+function wfStart(){wfStop();const cv=document.getElementById("wfc"),sv=cv&&cv.parentNode.querySelector("svg");if(!cv||!wfOn||!wfF)return;if(wfIO)wfIO.disconnect();if(window.IntersectionObserver){wfIO=new IntersectionObserver(es=>{const v=es[0].isIntersecting;if(v===wfVis)return;wfVis=v;if(!v)wfStop();else if(tab==="wx"&&wfOn&&!wfRaf&&!document.hidden)wfStart()});wfIO.observe(cv)}if(!wfVis||document.hidden)return;
  const dpr=window.devicePixelRatio||1,F=wfF,rnd=()=>[F.X0+Math.random()*(F.X1-F.X0),F.Y0+Math.random()*(F.Y1-F.Y0),Math.floor(Math.random()*60)];
  wfPt=Array.from({length:260},rnd);let M=null,W=0,H=0;
  const fit=()=>{const r=cv.getBoundingClientRect();W=Math.round(r.width*dpr);H=Math.round(r.height*dpr);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}const m=sv.getScreenCTM();if(!m)return false;M={a:m.a*dpr,b:m.b*dpr,c:m.c*dpr,d:m.d*dpr,e:(m.e-r.left)*dpr,f:(m.f-r.top)*dpr};return true};
@@ -334,7 +336,7 @@ function wx(){
  if(wxD&&(wxK<0||wxK>=wxD[0].hourly.time.length))wxK=nowIdx();
  const G=wxGeo(),W=G.W,H=G.H,N=wxD?wxD[0].hourly.time.length:1,K=Math.max(0,wxK);
  if(wfOn)wfBuild(K);
- const g=`<path d="${G.d}Z" fill="#9cc7ef" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxf">${wfSvg()}</g><g id="wxr">${rnSvg()}</g>${rnOn?`<path d="${G.d}Z" fill="none" stroke="#2f6fae" stroke-width="3" stroke-linejoin="round" style="pointer-events:none"/>`:""}<g id="wxs">${shoreSvg(K)}</g><g id="wxp">${wpOn?pinsSvg(K):""}</g>`;
+ const g=`<path d="${G.d}Z" fill="${wfOn?"none":"#9cc7ef"}" stroke="#4f8fcb" stroke-width="3" stroke-linejoin="round" opacity=".9"/><g id="wxf">${wfSvg()}</g><g id="wxr">${rnSvg()}</g>${rnOn||wfOn?`<path d="${G.d}Z" fill="none" stroke="#2f6fae" stroke-width="3" stroke-linejoin="round" style="pointer-events:none"/>`:""}<g id="wxs">${shoreSvg(K)}</g><g id="wxp">${wpOn?pinsSvg(K):""}</g>`;
  let sh="";
  if(wxSel>=0&&wxD&&wxD[wxSel]){const D=wxD[wxSel],c=D.current,hh=D.hourly,ds=D.daily,nowH=c.time.slice(0,13),td=c.time.slice(0,10),nm=WXP[wxSel][0];
   const DL={"-2":"一昨日","-1":"昨日","0":"今日","1":"明日"},dl=day=>DL[Math.round((new Date(day)-new Date(td))/864e5)]||day,wd=day=>"日月火水木金土"[new Date(day+"T00:00").getDay()];
