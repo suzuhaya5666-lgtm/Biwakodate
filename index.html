@@ -237,11 +237,13 @@ function rnPaintOnly(){const r=document.getElementById("wxr"),l=document.getElem
 function rnCtl(){if(!rnOn)return"";const F=rnFrames();if(!F.length)return`<div class="note" id="rnl">${rnLab()}</div>`;
  return`<div class="row" style="align-items:center;gap:8px;margin-top:4px"><button id="rnp" style="min-width:44px">▶</button><input id="rns" type="range" min="0" max="${F.length-1}" step="1" value="${rnIdx(F)}" style="flex:1;min-width:0"><b id="rnl" style="font-size:13px;text-align:right;white-space:nowrap">${rnLab()}</b></div>
  <div class="note" style="margin-top:0">雨雲: 過去3時間〜1時間先を5分刻みで動かせます(気象庁)</div>`}
+function rnSync(){if(!wxD||!rnSel){rnPaintOnly();return}const t=new Date(rnMs(rnSel)+9*36e5).toISOString().slice(0,13),i=wxD[0].hourly.time.findIndex(x=>x.slice(0,13)===t);
+ if(i>=0&&i!==wxK){wxK=i;wxPaint()}else rnPaintOnly()}
 function rnBind(){const sl=document.getElementById("rns"),pb=document.getElementById("rnp");if(!sl)return;
- sl.oninput=()=>{rnStop();const F=rnFrames();rnSel=F[+sl.value].v;rnPaintOnly()};
+ sl.oninput=()=>{rnStop();const F=rnFrames();rnSel=F[+sl.value].v;rnSync()};
  pb.onclick=()=>{if(rnTimer){rnStop();return}const F=rnFrames();F.forEach(f=>{const n=2**RN_Z;/* 先読み */const G=wxGeo(),{ax,bx,ay,by}=RNA,tx=l=>(l+180)/360*n,ty=m=>(1-m/Math.PI)/2*n;for(let X=Math.floor(tx((-90-bx)/ax));X<=Math.floor(tx((G.W+100-bx)/ax));X++)for(let Y=Math.floor(Math.min(ty((-10-by)/ay),ty((G.H+10-by)/ay)));Y<=Math.floor(Math.max(ty((-10-by)/ay),ty((G.H+10-by)/ay)));Y++){const im=new Image();im.src=`${RN_B}${f.b}/none/${f.v}/surf/hrpns/${RN_Z}/${X}/${Y}.png`}});
   pb.textContent="⏸";let i=rnIdx(F);if(i>=F.length-1)i=-1;
-  rnTimer=setInterval(()=>{if(!document.getElementById("rns")||tab!=="wx"){rnStop();return}const F2=rnFrames();i++;if(i>=F2.length){rnStop();return}rnSel=F2[i].v;rnPaintOnly()},500)}}
+  rnTimer=setInterval(()=>{if(!document.getElementById("rns")||tab!=="wx"){rnStop();return}const F2=rnFrames();i++;if(i>=F2.length){rnStop();return}rnSel=F2[i].v;rnSync()},500)}}
 function shoreSvg(k){if(!wxW||!wxOn)return"";const S=wxGeo().S,n=S.length;let o="";
  for(let j=0;j<n;j++){const h=(wxW[j][k]+wxW[(j+1)%n][k])/2;if(h<.1)continue;const a=S[j],b=S[(j+1)%n];
   o+=`<line x1="${a[0].toFixed(0)}" y1="${a[1].toFixed(0)}" x2="${b[0].toFixed(0)}" y2="${b[1].toFixed(0)}" stroke="${wcol(h)}" stroke-width="12" stroke-linecap="round" opacity="${Math.max(.3,Math.min(.95,h/.35)).toFixed(2)}"/>`}
