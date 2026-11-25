@@ -546,7 +546,7 @@ function chartRender(root,st,o){const P=o.P||"",Q=id=>root.querySelector("#"+P+i
  ${chips}${svg}${leg}${nfix?`<p class="note">⚠️ 前後の値から5℃以上ずれた異常値 ${nfix} 件を、前後の正常値の平均に直して表示しています(元のデータは変えていません)。</p>`:""}${histNote?`<p class="note">${esc(histNote)}</p>`:""}${err?`<p class="note">${esc(err)}</p>`:""}<div class="row"><label>縦軸の最小<input id="${P}y0" type="number" step="any" placeholder="自動" value="${yr[0]}"></label><label>縦軸の最大<input id="${P}y1" type="number" step="any" placeholder="自動" value="${yr[1]}"></label><button id="${P}ya">自動に戻す</button></div></div>`;
  Q("cm").value=cm;if(Q("rg"))Q("rg").value=st.rng;
  root.querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>{const p=places[+b.dataset.i],h=st.hide||[];st.hide=h.includes(p)?h.filter(x=>x!==p):h.concat(p);o.save();o.rerender()});
- {const sv=$("#v-chart svg");if(sv&&tipFn)["pointerdown","pointermove"].forEach(ev=>sv.addEventListener(ev,e=>tipFn(e,sv)))}
+ {const sv=root.querySelector("svg");if(sv&&tipFn)["pointerdown","pointermove"].forEach(ev=>sv.addEventListener(ev,e=>tipFn(e,sv)))}
  const set=(k,v)=>{st[k]=v;o.save();o.rerender()},setY=(i,v)=>{const a=st.yr[cm]||["",""];a[i]=v;st.yr[cm]=a;o.save();o.rerender()};
  {const b=Q("bs");if(b){b.value=st.base;b.onchange=e=>set("base",e.target.value)}}
  Q("cm").onchange=e=>set("cm",e.target.value);if(Q("rg"))Q("rg").onchange=e=>set("rng",e.target.value);
