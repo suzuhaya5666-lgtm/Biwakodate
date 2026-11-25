@@ -293,13 +293,15 @@ function rnLeg(){if(!rnOn)return wfOn?wfLeg():thOn?thLeg(8):"";const C=[["#b4006
  <div style="display:flex"><div style="width:9px;border-radius:5px;overflow:hidden">${C.map(c=>`<div style="height:${h}px;background:${c[0]}"></div>`).join("")}</div>
  <div style="position:relative;width:22px;height:${h*C.length}px">${C.map((c,i)=>c[1]?`<span style="position:absolute;left:5px;top:${h*(i+1)}px;transform:translateY(-50%)">${c[1]}</span>`:"").join("")}</div></div>
  <div style="font-size:9px;font-weight:400;margin-top:4px;text-align:center">mm/h</div></div>`}
-function rnSvg(el){el=el||"hrpns";if(el==="hrpns")rnSt={n:0,ok:0,ng:0,bad:"",u:[]};if(el==="hrpns"?!rnOn:!thOn)return"";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"";const G=wxGeo(),n=2**RN_Z,{ax,bx,ay,by}=RNA,
+function rnSvg(el){el=el||"hrpns";if(el==="hrpns")rnSt={n:0,ok:0,ng:0,bad:"",u:[]};if(el==="hrpns"?!rnOn:!thOn)return"";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"";const Z=el==="hrpns"?RN_Z:thZ,G=wxGeo(),n=2**Z,{ax,bx,ay,by}=RNA,
  lo=x=>(x-bx)/ax,mm=y=>(y-by)/ay,tx=l=>(l+180)/360*n,ty=m=>(1-m/Math.PI)/2*n,
  x0=Math.floor(Math.min(tx(lo(-90)),tx(lo(G.W+100)))),x1=Math.floor(Math.max(tx(lo(-90)),tx(lo(G.W+100))))+1,
  y0=Math.floor(Math.min(ty(mm(-10)),ty(mm(G.H+10)))),y1=Math.floor(Math.max(ty(mm(-10)),ty(mm(G.H+10)))),sx=ax*360/(256*n),sy=-ay*2*Math.PI/(256*n);let o="";
  for(let X=x0;X<=x1;X++)for(let Y=y0;Y<=y1;Y++){const px=ax*(X*360/n-180)+bx,py=ay*(Math.PI-2*Math.PI*Y/n)+by;
-  const U=`${RN_B}${f.b}/none/${f.v}/surf/${el}/${RN_Z}/${X}/${Y}.png`;rnSt.u.push(U);o+=`<image href="${U}" width="256" height="256" transform="translate(${px.toFixed(2)},${py.toFixed(2)}) scale(${sx.toFixed(5)},${sy.toFixed(5)})" opacity=".75" style="pointer-events:none" onload="rnImg(1)" onerror="rnImg(0,this)"/>`;rnSt.n++}
+  const U=`${RN_B}${f.b}/none/${f.v}/surf/${el}/${Z}/${X}/${Y}.png`;if(el==="hrpns")rnSt.u.push(U);o+=`<image href="${U}" width="256" height="256" transform="translate(${px.toFixed(2)},${py.toFixed(2)}) scale(${sx.toFixed(5)},${sy.toFixed(5)})" opacity="${el==="hrpns"?.75:.85}" style="pointer-events:none" ${el==="hrpns"?`onload="rnImg(1)" onerror="rnImg(0,this)"`:`onerror="thErr(this,${Z})"`}/>`;if(el==="hrpns")rnSt.n++}
  return o}
+let thZ=10,thBad=0;
+function thErr(im,z){im.style.display="none";if(z!==thZ)return;if(++thBad<3)return;thBad=0;if(thZ>4){thZ-=2;const t=document.getElementById("wxt");if(t)t.innerHTML=rnSvg("thns")}}
 function rnLab(){if(!(rnOn||thOn))return"";if(!rnC)return"雨雲を読み込み中…";const F=rnFrames(),f=F[rnIdx(F)];if(!f)return"雨雲データを取得できませんでした";
  const t=new Date(rnMs(f.v)+9*36e5),h=t.getUTCHours(),m=t.getUTCMinutes();return`${h}:${String(m).padStart(2,"0")} ${f.fc?"の予測":"の実況"}`+(rnIdx(F)===F.filter(x=>!x.fc).length-1?"(いま)":"")}
 function rnStop(){if(rnTimer){clearInterval(rnTimer);rnTimer=null}const b=document.getElementById("rnp");if(b)b.textContent="▶"}
