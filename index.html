@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-512.png">
 <style>
-:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f8fa;--card:#fff;--tx:#1b2733;--sub:#6b7a88;--ln:#dbe3ea;--ac:#1f6feb;--big:#fde2e0;--hl:#fff1b8;--mid:#e3f0ff;--sml:#f0f0f0;--land:#f3ede0}
-@media (prefers-color-scheme:dark){:root{--bg:#0f161d;--card:#18222c;--tx:#e6edf3;--sub:#8b9bab;--ln:#2a3846;--ac:#58a6ff;--big:#4a2226;--hl:#4b3f10;--mid:#1c3350;--sml:#222c36;--land:#2c2a24}}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f8fa;--card:#fff;--tx:#1b2733;--sub:#56626e;--ln:#dbe3ea;--ac:#1f6feb;--big:#fde2e0;--hl:#fff1b8;--mid:#e3f0ff;--sml:#f0f0f0;--land:#f3ede0}
+@media (prefers-color-scheme:dark){:root{--bg:#0f161d;--card:#18222c;--tx:#e6edf3;--sub:#a3b2c1;--ln:#2a3846;--ac:#58a6ff;--big:#4a2226;--hl:#4b3f10;--mid:#1c3350;--sml:#222c36;--land:#2c2a24}}
 *{box-sizing:border-box;touch-action:manipulation}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{overflow-x:hidden;margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.5}
@@ -45,7 +45,7 @@ svg{width:100%;height:auto;touch-action:pan-y}
 .trow{border-top:1px solid var(--ln);padding:10px 0;cursor:pointer}
 tr.hl td{background:var(--hl);font-weight:600}
 .bar{display:inline-block;height:8px;background:var(--ac);border-radius:4px;vertical-align:middle;margin-left:4px}
-.note{color:var(--sub);font-size:12px}
+.note{color:var(--sub);font-size:13px}
 .bad{border-color:#d1242f}
 .warn{color:#d1242f;font-weight:600}
 .up{color:#d1242f}.dn{color:#1f6feb}
@@ -444,7 +444,7 @@ function now(){
  const latest=q=>q.reduce((x,r)=>r.time>x.time?r:x);
  let h=`<div class="card${bad?" bad":""}"><div style="font-size:18px"><span class="note">今日</span> <b>${moon(a)} ${shio(a)}</b> <span class="note">月齢${a.toFixed(1)}</span></div>`;
  for(const m of keys){const g=by(m);let ps=Object.keys(g);if(m==="level"&&g["琵琶湖(平均)"])ps=["琵琶湖(平均)"];if(!ps.length)continue;
-  h+=`<div style="margin-top:8px"><div class="lbl">${LAB[m]}</div>`+ps.map(p=>`<span class="chip">${esc(p)} ${m==="temp"&&jump(g[p])?"⚠️":""}<b class="${m==="temp"?wtCls(p,latest(g[p])):""}">${latest(g[p])[m]}</b></span>`).join("")+`</div>`}
+  h+=`<div style="margin-top:8px"><div class="lbl">${LAB[m]}</div>`+ps.map(p=>`<span class="chip">${esc(p)} ${m==="temp"&&jump(g[p])?"⚠️":""}<b class="${m==="temp"?wtCls(p,latest(g[p])):""}">${latest(g[p])[m]}${m==="temp"?"℃":m==="level"?"m":""}</b></span>`).join("")+`</div>`}
  if(la)h+=`<div class="note" style="margin-top:8px">データ最終更新 ${la.replace("T"," ")}(${hr<1?"1時間以内":Math.floor(hr)+"時間前"})</div>`;
  if(bad)h+=`<div class="warn">3時間以上更新がありません。取得が止まっている可能性があります。GitHub の Actions を確認してください。</div>`;
  h+=`</div>`;
