@@ -8,12 +8,13 @@
 """
 import csv
 import json
+import re
 import subprocess
 import os
 import sys
 import time
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 BASE = "https://www.river.go.jp/kawabou/file"
@@ -516,6 +517,30 @@ def notify_alerts(out, topic, send=ntfy_send, extra=None):
     N_STATE.write_text(json.dumps({"keys": sorted(cur.keys())}, ensure_ascii=False), encoding="utf-8")
 
 
+HYDRO_URL = "https://www.kkr.mlit.go.jp/biwako/hydrology.xml"
+
+
+def fetch_discharge():
+    """琵琶湖河川事務所の水文情報XMLから、当日の洗堰放流量(m³/s)を読む。形が変わっていたら None。"""
+    req = urllib.request.Request(HYDRO_URL, headers={"User-Agent": "biwako-fishing-collector/0.1"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        x = r.read().decode("utf-8", "replace")
+    def tag(n):
+        m = re.search(r"<(?:\w+:)?%s\b[^>]*>([^<]*)<" % n, x)
+        return m.group(1).strip() if m else None
+    y, mo, d, v = tag("yaer") or tag("year"), tag("month"), tag("day"), tag("discharge_value")
+    if not (y and mo and d and v):
+        return None
+    try:
+        flow = float(v)
+        dt = date(int(y), int(mo), int(d))
+    except ValueError:
+        return None
+    if not (0 <= flow <= 2000):  # ありえない値は捨てる
+        return None
+    return {"time": dt.isoformat() + "T06:00", "flow": flow}
+
+
 def main():
     if len(sys.argv) >= 4 and sys.argv[1] == "--dump":
         data = get_json(station_url(sys.argv[2], sys.argv[3]))
@@ -546,6 +571,15 @@ def main():
                 seen.add((t, place, col))
         except Exception as e:  # 1地点の失敗で全体を止めない
             print(f"取得失敗: {place}: {e}", file=sys.stderr)
+
+    # 瀬田川洗堰の放流量(琵琶湖河川事務所が毎朝6時ごろ更新する公開XML)
+    try:
+        q = fetch_discharge()
+        if q and (q["time"], "瀬田川洗堰", "flow") not in seen:
+            rows.append({"time": q["time"], "place": "瀬田川洗堰", "level": "", "flow": q["flow"], "temp": ""})
+            seen.add((q["time"], "瀬田川洗堰", "flow"))
+    except Exception as e:
+        print(f"放流量の取得失敗: {e}", file=sys.stderr)
 
     rows.sort(key=lambda r: r["time"])
     new_file = not OUT.exists()
