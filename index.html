@@ -229,7 +229,7 @@ async function wgLoad(){if(Date.now()-wgAt<20*60e3)return;wgAt=Date.now();try{co
 function wfBuild(k){if(!wxD){wfF=null;return}const P=[],tk=wxD[0].hourly.time[k],gi=wgD&&wgD.time?wgD.time.indexOf(tk):-1;let E=1500;
  if(gi>=0){E=400;const my=la=>Math.log(Math.tan(Math.PI/4+la*Math.PI/360));wgD.p.forEach((q,i)=>{const sp=wgD.s[i][gi],dd=wgD.d[i][gi];if(sp==null||dd==null)return;const d=dd*Math.PI/180;P.push([RNA.ax*q[1]+RNA.bx,RNA.ay*my(q[0])+RNA.by,sp,-Math.sin(d),Math.cos(d)])})}
  else WXP.forEach((p,i)=>{const hh=wxD[i]&&wxD[i].hourly;if(!hh||hh.wind_speed_10m[k]==null)return;const sp=hh.wind_speed_10m[k],d=hh.wind_direction_10m[k]*Math.PI/180;P.push([p[4],p[5],sp,-Math.sin(d),Math.cos(d)])});
- if(!P.length){wfF=null;return}const G=wxGeo(),X0=-90,Y0=-10,X1=G.W+100,Y1=G.H+10,C=8,nx=Math.ceil((X1-X0)/C)+1,ny=Math.ceil((Y1-Y0)/C)+1,S=new Float32Array(nx*ny),U=new Float32Array(nx*ny),V=new Float32Array(nx*ny);
+ if(!P.length){wfF=null;return}const G=wxGeo(),mx=(G.W+190)*.06,my=(G.H+20)*.06,X0=-90-mx,Y0=-10-my,X1=G.W+100+mx+50,Y1=G.H+10+my,C=8,nx=Math.ceil((X1-X0)/C)+1,ny=Math.ceil((Y1-Y0)/C)+1,S=new Float32Array(nx*ny),U=new Float32Array(nx*ny),V=new Float32Array(nx*ny);
  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=X0+i*C,y=Y0+j*C;let w=0,s=0,u=0,v=0;P.forEach(q=>{const a=1/((x-q[0])**2+(y-q[1])**2+E);w+=a;s+=a*q[2];u+=a*q[3];v+=a*q[4]});const L=Math.hypot(u,v)||1,o=j*nx+i;S[o]=s/w;U[o]=u/L;V[o]=v/L}
  wfF={X0,Y0,X1,Y1,C,nx,ny,S,U,V,P,E};
  const cv=document.createElement("canvas");cv.width=nx;cv.height=ny;const cx=cv.getContext("2d"),im=cx.createImageData(nx,ny);
@@ -261,7 +261,7 @@ let wfVis=true,wfIO=null;
 document.addEventListener("visibilitychange",()=>{if(document.hidden)wfStop();else if(tab==="wx"&&wfOn&&wfVis&&!wfRaf)wfStart()});
 function wfStart(){wfStop();const cv=document.getElementById("wfc"),sv=cv&&cv.parentNode.querySelector("svg");if(!cv||!wfOn||!wfF)return;if(wfIO)wfIO.disconnect();if(window.IntersectionObserver){wfIO=new IntersectionObserver(es=>{const v=es[0].isIntersecting;if(v===wfVis)return;wfVis=v;if(!v)wfStop();else if(tab==="wx"&&wfOn&&!wfRaf&&!document.hidden)wfStart()});wfIO.observe(cv)}if(!wfVis||document.hidden)return;
  const dpr=window.devicePixelRatio||1,F=wfF,rnd=()=>[F.X0+Math.random()*(F.X1-F.X0),F.Y0+Math.random()*(F.Y1-F.Y0),Math.floor(Math.random()*60)];
- wfPt=Array.from({length:260},rnd);let M=null,W=0,H=0;
+ wfPt=Array.from({length:320},rnd);let M=null,W=0,H=0;
  const fit=()=>{const r=cv.getBoundingClientRect();W=Math.round(r.width*dpr);H=Math.round(r.height*dpr);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H}const m=sv.getScreenCTM();if(!m)return false;M={a:m.a*dpr,b:m.b*dpr,c:m.c*dpr,d:m.d*dpr,e:(m.e-r.left)*dpr,f:(m.f-r.top)*dpr};return true};
  if(!fit())return;const ctx=cv.getContext("2d");let n=0;
  const step=()=>{if(!document.getElementById("wfc")||tab!=="wx"||!wfOn){wfStop();return}if(++n%30===0)fit();
