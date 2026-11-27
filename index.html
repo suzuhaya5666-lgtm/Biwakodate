@@ -53,6 +53,7 @@ tr.hl td{background:var(--hl);font-weight:600}
 .lbl{color:var(--sub);font-size:12px}
 textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--ln);border-radius:8px;padding:8px;margin:8px 0}
 .th{color:#d1242f;font-weight:700}.tl{color:#1f6feb;font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:4px}.tile{background:var(--sml);border-radius:10px;padding:8px 10px}.tl1{font-size:13px;color:var(--sub)}.tv{margin:2px 0}.tv b{font-size:28px;line-height:1.15}.tu{font-size:13px;color:var(--sub);margin-left:2px}.tl2{font-size:12px;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -443,8 +444,13 @@ function now(){
  const by=m=>{const o={};rs.filter(r=>r[m]!=null).forEach(r=>(o[r.place]=o[r.place]||[]).push(r));return o};
  const latest=q=>q.reduce((x,r)=>r.time>x.time?r:x);
  let h=`<div class="card${bad?" bad":""}"><div style="font-size:18px"><span class="note">今日</span> <b>${moon(a)} ${shio(a)}</b> <span class="note">月齢${a.toFixed(1)}</span></div>`;
- for(const m of keys){const g=by(m);let ps=Object.keys(g);if(m==="level"&&g["琵琶湖(平均)"])ps=["琵琶湖(平均)"];if(!ps.length)continue;
-  h+=`<div style="margin-top:8px"><div class="lbl">${LAB[m]}</div>`+ps.map(p=>`<span class="chip">${esc(p)} ${m==="temp"&&jump(g[p])?"⚠️":""}<b class="${m==="temp"?wtCls(p,latest(g[p])):""}">${latest(g[p])[m]}${m==="temp"?"℃":m==="level"?"m":""}</b></span>`).join("")+`</div>`}
+ const U={temp:"℃",flow:"m³/s",level:"m"};
+ const tile=(m,p,q,lab)=>{const L=latest(q),T=new Date(L.time).getTime(),d1=dif(L,nearest(q,T-24*H,2*H),m);let nm="";
+  if((m==="temp"||m==="level")&&view.base!=="off"){const c=climM(m,p,T);if(c)nm=Math.abs(L[m]-c.m)<c.s*0.5?"平年並":L[m]>c.m?(L[m]-c.m>=c.s?"平年より高め":"平年よりやや高"):(c.m-L[m]>=c.s?"平年より低め":"平年よりやや低")}
+  return`<div class="tile"><div class="tl1">${esc(lab||p)}</div><div class="tv"><b class="${m==="temp"?wtCls(p,L):""}">${m==="temp"&&jump(q)?"⚠️":""}${L[m]}</b><span class="tu">${U[m]}</span></div><div class="tl2">前日比 ${chg(d1,m)}${nm?`<br>${nm}`:""}</div></div>`};
+ {const g=by("temp"),ps=Object.keys(g);if(ps.length)h+=`<div class="lbl" style="margin-top:10px">水温</div><div class="tiles">${ps.map(p=>tile("temp",p,g[p])).join("")}</div>`}
+ {const gf=by("flow"),gl=by("level"),fp=Object.keys(gf)[0],lp=gl["琵琶湖(平均)"]?"琵琶湖(平均)":Object.keys(gl)[0];let t2="";
+  if(fp)t2+=tile("flow",fp,gf[fp],"放流量("+fp+")");if(lp)t2+=tile("level",lp,gl[lp],"水位("+lp.replace("(平均)","平均")+")");if(t2)h+=`<div class="tiles" style="margin-top:8px">${t2}</div>`}
  if(la)h+=`<div class="note" style="margin-top:8px">データ最終更新 ${la.replace("T"," ")}(${hr<1?"1時間以内":Math.floor(hr)+"時間前"})</div>`;
  if(bad)h+=`<div class="warn">3時間以上更新がありません。取得が止まっている可能性があります。GitHub の Actions を確認してください。</div>`;
  h+=`</div>`;
