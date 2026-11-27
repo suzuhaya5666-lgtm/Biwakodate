@@ -101,7 +101,7 @@ function loadView(){const d={cm:"temp",rng:"7",cs:"",ce:"",yr:{},base:"r10"};try
 function saveView(){try{localStorage.setItem("bw_view",JSON.stringify(view))}catch(e){}}
 let auto=[],hist=[],histHourly=false,histTried=false,histNote="",man=loadMan(),view=loadView(),cur=new Date(),tab="wx",err="読み込み中…";
 const all=()=>auto.concat(expandMan());
-function expandMan(){const out=[],H=36e5,nowT=Math.floor(Date.now()/H)*H,fl={};
+function expandMan(){const out=[],H=36e5,nowT=Math.floor(Date.now()/H)*H,fl={},ad=new Set(auto.filter(r=>r.flow!=null).map(r=>r.time.slice(0,10)));/* 自動の放流量がある日は、手入力の続きの値を使わない */
  man.forEach(r=>{if(r.level!=null||r.temp!=null)out.push({...r,flow:null,src:"m"});if(r.flow!=null)(fl[r.place]=fl[r.place]||[]).push(r)});
  for(const p in fl){const a=fl[p].slice().sort((x,y)=>x.time<y.time?-1:x.time>y.time?1:0);
   a.forEach((r,i)=>{const s=new Date(r.time).getTime();if(isNaN(s))return;const s0=Math.floor(s/H)*H;let e=nowT;
@@ -109,7 +109,7 @@ function expandMan(){const out=[],H=36e5,nowT=Math.floor(Date.now()/H)*H,fl={};
    if(nx!=null&&nx<e)e=nx;
    if(r.end){const x=new Date(r.end+"T23:00").getTime();if(!isNaN(x)&&x<e)e=x}
    if(e<s0){out.push({...r,level:null,temp:null,src:"m"});return}
-   for(let t=s0;t<=e;t+=H){const d=new Date(t);out.push({time:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`,place:p,level:null,flow:r.flow,temp:null,src:"m"})}})}
+   for(let t=s0;t<=e;t+=H){const d=new Date(t),ds=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;if(ad.has(ds)&&r.time.slice(0,10)!==ds)continue;out.push({time:`${ds}T${pad(d.getHours())}:00`,place:p,level:null,flow:r.flow,temp:null,src:"m"})}})}
  return out}
 async function loadCsv(){
  for(const u of CSV_URLS){
