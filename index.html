@@ -53,7 +53,7 @@ tr.hl td{background:var(--hl);font-weight:600}
 .lbl{color:var(--sub);font-size:12px}
 textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--ln);border-radius:8px;padding:8px;margin:8px 0}
 .th{color:#d1242f;font-weight:700}.tl{color:#1f6feb;font-weight:700}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:4px}.tile{background:var(--sml);border-radius:10px;padding:8px 10px}.tl1{font-size:13px;color:var(--sub)}.tv{margin:2px 0}.tv b{font-size:28px;line-height:1.15}.tu{font-size:13px;color:var(--sub);margin-left:2px}.tl2{font-size:12px;color:var(--sub)}
+.tiles2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.sum{background:#eef5ff;border-radius:10px;padding:10px 12px;margin-top:10px;font-size:14px;line-height:1.7}@media(prefers-color-scheme:dark){.sum{background:#1e2a3a}}.tile{background:var(--sml);border-radius:10px;padding:8px 10px}.tl1{font-size:13px;color:var(--sub)}.tv{margin:2px 0}.tv b{font-size:28px;line-height:1.15}.tu{font-size:13px;color:var(--sub);margin-left:2px}.tl2{font-size:12px;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -444,13 +444,26 @@ function now(){
  const by=m=>{const o={};rs.filter(r=>r[m]!=null).forEach(r=>(o[r.place]=o[r.place]||[]).push(r));return o};
  const latest=q=>q.reduce((x,r)=>r.time>x.time?r:x);
  let h=`<div class="card${bad?" bad":""}"><div style="font-size:18px"><span class="note">今日</span> <b>${moon(a)} ${shio(a)}</b> <span class="note">月齢${a.toFixed(1)}</span></div>`;
- const U={temp:"℃",flow:"m³/s",level:"m"};
- const tile=(m,p,q,lab)=>{const L=latest(q),T=new Date(L.time).getTime(),d1=dif(L,nearest(q,T-24*H,2*H),m);let nm="";
-  if((m==="temp"||m==="level")&&view.base!=="off"){const c=climM(m,p,T);if(c)nm=Math.abs(L[m]-c.m)<c.s*0.5?"平年並":L[m]>c.m?(L[m]-c.m>=c.s?"平年より高め":"平年よりやや高"):(c.m-L[m]>=c.s?"平年より低め":"平年よりやや低")}
-  return`<div class="tile"><div class="tl1">${esc(lab||p)}</div><div class="tv"><b class="${m==="temp"?wtCls(p,L):""}">${m==="temp"&&jump(q)?"⚠️":""}${L[m]}</b><span class="tu">${U[m]}</span></div><div class="tl2">前日比 ${chg(d1,m)}${nm?`<br>${nm}`:""}</div></div>`};
- {const g=by("temp"),ps=Object.keys(g);if(ps.length)h+=`<div class="lbl" style="margin-top:10px">水温</div><div class="tiles">${ps.map(p=>tile("temp",p,g[p])).join("")}</div>`}
- {const gf=by("flow"),gl=by("level"),fp=Object.keys(gf)[0],lp=gl["琵琶湖(平均)"]?"琵琶湖(平均)":Object.keys(gl)[0];let t2="";
-  if(fp)t2+=tile("flow",fp,gf[fp],"放流量("+fp+")");if(lp)t2+=tile("level",lp,gl[lp],"水位("+lp.replace("(平均)","平均")+")");if(t2)h+=`<div class="tiles" style="margin-top:8px">${t2}</div>`}
+ const U={temp:"℃",flow:"m³/s",level:"m"},td=new Date(),ds=k=>{const x=new Date(td.getFullYear(),td.getMonth(),td.getDate()-k);return`${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`};
+ const info=(m,p,q)=>{const L=latest(q),T=new Date(L.time).getTime(),d1=dif(L,nearest(q,T-24*H,2*H),m);let nm="",dir=0;
+  if((m==="temp"||m==="level")&&view.base!=="off"){const c=climM(m,p,T);if(c){const x=L[m]-c.m;nm=Math.abs(x)<c.s*0.5?"並":x>0?(x>=c.s?"高め":"やや高"):(-x>=c.s?"低め":"やや低");dir=Math.abs(x)<c.s*0.5?0:x>0?1:-1}}
+  const wk=[];for(let k=6;k>=0;k--)wk.push(dayAvg(rs,m,ds(k),p));return{L,d1,nm,dir,wk}};
+ const spark=(v,w,col)=>{const a=v.map((x,i)=>[i,x]).filter(x=>x[1]!=null);if(a.length<2)return'<div class="note" style="font-size:10px;height:28px">推移はデータがたまると出ます</div>';const lo=Math.min(...a.map(x=>x[1])),hi=Math.max(...a.map(x=>x[1])),rg=hi-lo||1;
+  return`<svg width="100%" height="28" viewBox="0 0 ${w} 28" preserveAspectRatio="none" style="display:block;margin-top:4px;height:28px;width:100%"><polyline points="${a.map(([i,x])=>`${(i*w/6).toFixed(1)},${(26-(x-lo)/rg*24).toFixed(1)}`).join(" ")}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`};
+ const gT=by("temp"),gF=by("flow"),gL=by("level"),tp=Object.keys(gT),fp=Object.keys(gF)[0],lp=gL["琵琶湖(平均)"]?"琵琶湖(平均)":Object.keys(gL)[0];
+ const IT=tp.map(p=>[p,info("temp",p,gT[p])]),IF=fp?info("flow",fp,gF[fp]):null,IL=lp?info("level",lp,gL[lp]):null;
+ {const f=[],sp=n=>n.replace("(瀬田川)",""),grp=k=>IT.filter(([p,x])=>k(x)).map(([p])=>sp(p));
+  if(IT.length){const up=grp(x=>x.d1!=null&&x.d1>=0.3),dn=grp(x=>x.d1!=null&&x.d1<=-0.3),fl=grp(x=>x.d1==null||Math.abs(x.d1)<0.3),pr=[];
+   if(up.length)pr.push(`${up.join("・")}は前日より上昇`);if(dn.length)pr.push(`${dn.join("・")}は前日より低下`);if(fl.length)pr.push(`${fl.join("・")}は横ばい`);
+   const cs=[...new Set(IT.map(([p,x])=>x.dir))];let cl="";if(IT.every(([p,x])=>x.nm)){cl=cs.length===1?(cs[0]<0?"どこも平年より低め":cs[0]>0?"どこも平年より高め":"どこも平年並み"):[-1,0,1].map(d=>{const n=IT.filter(([p,x])=>x.dir===d).map(([p])=>sp(p));return n.length?`${n.join("・")}は平年${d<0?"より低め":d>0?"より高め":"並み"}`:""}).filter(Boolean).join("、")}
+   f.push(`<b>水温</b> ${pr.join("、")}。${cl?cl+"。":""}`)}
+  if(IL){const a=IL.wk.find(x=>x!=null),b=IL.wk[6]??IL.L.level,c=a!=null&&b!=null?Math.round((b-a)*100):null;
+   f.push(`<b>水位</b> ${IL.L.level}m。${c==null?"":Math.abs(c)<1?"1週間でほぼ変わらず":`1週間で${Math.abs(c)}cm${c>0?"上がり":"下がり"}`}${IL.nm?`、平年${IL.dir<0?"より低め":IL.dir>0?"より高め":"並み"}`:""}。`)}
+  if(IF){const d=IF.d1;f.push(`<b>放流量</b> ${IF.L.flow}m³/s${d==null?"":Math.abs(d)<0.5?"で前日から変化なし":`、前日より${Math.abs(Math.round(d))}${d>0?"増えています":"減っています"}`}。`)}
+  if(f.length)h+=`<div class="sum">${f.join("<br>")}</div>`}
+ {const tl=(m,p,x,lab,wide)=>`<div class="tile"${wide?' style="grid-column:1/-1"':""}><div class="tl1">${esc(lab||p)}</div><div class="tv"><b class="${m==="temp"?wtCls(p,x.L):""}">${m==="temp"&&jump(gT[p])?"⚠️":""}${x.L[m]}</b><span class="tu">${U[m]}</span></div><div class="tl2">${chg(x.d1,m)} ${x.nm?`<span class="${x.dir<0?"tl":x.dir>0?"th":""}">平年${x.nm}</span>`:""}</div>${spark(x.wk,100,m==="temp"?"#2b6fd6":"#6b7a88")}<div class="note" style="font-size:10px">1週間の推移</div></div>`;
+  let t=IT.map(([p,x])=>tl("temp",p,x)).join("");if(IF)t+=tl("flow",fp,IF,"放流量("+fp+")");if(IL)t+=tl("level",lp,IL,"水位("+lp.replace("(平均)","平均")+")",IT.length%2===0?false:!IF||((IT.length+1)%2===0));
+  h+=`<div class="tiles2">${t}</div>`}
  if(la)h+=`<div class="note" style="margin-top:8px">データ最終更新 ${la.replace("T"," ")}(${hr<1?"1時間以内":Math.floor(hr)+"時間前"})</div>`;
  if(bad)h+=`<div class="warn">3時間以上更新がありません。取得が止まっている可能性があります。GitHub の Actions を確認してください。</div>`;
  h+=`</div>`;
