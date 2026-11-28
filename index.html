@@ -473,7 +473,7 @@ function now(){
   h+=`<div class="card scroll"><div class="row"><b style="flex:1">${LAB[m]}</b>${m==="temp"?baseSel():""}</div><table><tr><th>地点</th><th class="n">現在</th><th class="n">前日比</th><th class="n">3時間</th>${cl?'<th class="n">平年差</th>':""}<th>時刻</th></tr>`+ps.map(p=>{
    const q=g[p],L=latest(q),T=new Date(L.time).getTime();
    const d1=dif(L,nearest(q,T-24*H,2*H),m),d3=dif(L,nearest(q,T-3*H,1*H),m);
-   const stale=L.src==="a"&&(Date.now()-T)/H>=3;
+   const stale=L.src==="a"&&(Date.now()-T)/H>=(m==="flow"?30:3);/* 放流量は1日1回(朝6時)の更新 */
    let ca="";if(cl){const c=climM(m,p,T);ca=c?`<td class="n">${m==="temp"&&Math.abs(L[m]-c.m)<c.s*0.5?chg(L[m]-c.m,m).replace(/class="(up|dn)"/,'class=""'):chg(L[m]-c.m,m)}<span class="note"> ${Math.abs(L[m]-c.m)<c.s*0.5?"並":L[m]>c.m?(L[m]-c.m>=c.s?"高め":"やや高"):(c.m-L[m]>=c.s?"低め":"やや低")}</span></td>`:'<td class="n">–</td>'}
    return`<tr><td>${esc(p)}</td><td class="n">${m==="temp"&&jump(q)?"⚠️ ":""}<b class="${m==="temp"?wtCls(p,L):""}">${L[m]}</b></td><td class="n">${chg(d1,m)}</td><td class="n">${chg(d3,m)}</td>${ca}<td class="note${stale?" warn":""}">${stale?"⚠ ":""}${L.time.slice(5).replace("T"," ")}</td></tr>`}).join("")+`</table></div>`}
  {const jl=Object.entries(by("temp")).map(([p,q])=>[p,jump(q)]).filter(x=>x[1]);
